@@ -6,27 +6,40 @@ import dev.fuken404.opspilot.incidents.TicketActivity.Action;
 import dev.fuken404.opspilot.organizations.OrganizationAccess;
 import dev.fuken404.opspilot.organizations.Role;
 import dev.fuken404.opspilot.shared.ConflictException;
+import dev.fuken404.opspilot.shared.FileStorage;
 import dev.fuken404.opspilot.shared.NotFoundException;
+import dev.fuken404.opspilot.shared.RejectedFileException;
 import jakarta.persistence.criteria.Predicate;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 public class Tickets {
@@ -35,16 +48,23 @@ public class Tickets {
 
     private final TicketRepository tickets;
     private final TicketCommentRepository comments;
+    private final TicketAttachmentRepository attachments;
+    private final FileStorage storage;
+    private final long maxAttachmentBytes;
     private final OrganizationAccess access;
     private final Users users;
     private final ApplicationEventPublisher events;
     private final JdbcTemplate jdbc;
     private final Clock clock;
 
-    Tickets(TicketRepository tickets, TicketCommentRepository comments, OrganizationAccess access, Users users,
-            ApplicationEventPublisher events, JdbcTemplate jdbc, Clock clock) {
+    Tickets(TicketRepository tickets, TicketCommentRepository comments, TicketAttachmentRepository attachments,
+            FileStorage storage, @Value("${opspilot.attachments.max-bytes}") long maxAttachmentBytes,
+            OrganizationAccess access, Users users, ApplicationEventPublisher events, JdbcTemplate jdbc, Clock clock) {
         this.tickets = tickets;
         this.comments = comments;
+        this.attachments = attachments;
+        this.storage = storage;
+        this.maxAttachmentBytes = maxAttachmentBytes;
         this.access = access;
         this.users = users;
         this.events = events;
@@ -62,12 +82,24 @@ public class Tickets {
     public record Comment(UUID id, Person author, String body, boolean internal, Instant createdAt) {
     }
 
+    public record Attachment(UUID id, String filename, String contentType, long sizeBytes, Person uploader,
+                             boolean internal, Instant createdAt) {
+    }
+
+    /** Lo que se descarga. Quien lo recibe debe cerrar el stream. */
+    public record Download(String filename, String contentType, long sizeBytes, InputStream content) {
+    }
+
+    /** Datos básicos para procesos del sistema (correos). Requiere la organización activa. */
+    public record Snapshot(UUID id, int number, String title, TicketStatus status, UUID requesterId, UUID assigneeId) {
+    }
+
     /** El detalle incluye lo que la persona puede hacer, para que la interfaz no adivine permisos. */
     public record Detail(UUID id, int number, String title, String description, TicketCategory category,
                          TicketPriority priority, TicketStatus status, Person requester, Person assignee,
                          Instant createdAt, Instant updatedAt, Instant resolvedAt, Instant closedAt, long version,
                          Set<TicketStatus> nextStatuses, boolean canTriage, boolean canAssign, boolean canComment,
-                         boolean canCommentInternally, List<Comment> comments) {
+                         boolean canCommentInternally, List<Comment> comments, List<Attachment> attachments) {
     }
 
     public enum View { OPEN, CLOSED, ALL }
@@ -244,6 +276,84 @@ public class Tickets {
             || role == Role.TECHNICIAN && (ticket.getAssigneeId() == null || actor.getId().equals(ticket.getAssigneeId()));
     }
 
+    /**
+     * Guarda el archivo y luego la fila. Si la transacción se deshace, el archivo se borra: no quedan
+     * archivos huérfanos ocupando espacio.
+     */
+    @Transactional
+    public Detail attach(UUID organizationId, AppUser actor, UUID ticketId, String originalName, byte[] content,
+                         boolean internal) {
+        Role role = access.require(organizationId, actor);
+        Ticket ticket = load(organizationId, ticketId, actor, role);
+        if (internal && role == Role.CUSTOMER) {
+            throw new AccessDeniedException("El cliente no sube adjuntos internos");
+        }
+        if (ticket.getStatus().isFinal()) {
+            throw new ConflictException("El ticket ya está cerrado.");
+        }
+        if (content.length == 0) {
+            throw new RejectedFileException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "El archivo está vacío.");
+        }
+        if (content.length > maxAttachmentBytes) {
+            throw new RejectedFileException(HttpStatus.PAYLOAD_TOO_LARGE, "El archivo supera el máximo de 4 MB.");
+        }
+        String filename = FileTypes.cleanName(originalName);
+        String contentType = FileTypes.detect(filename, content);
+        TicketAttachment attachment = attachments.save(new TicketAttachment(ticket, actor.getId(), filename, contentType,
+            content.length, sha256(content), internal, now()));
+        try {
+            storage.put(attachment.getStorageKey(), content, contentType);
+        } catch (IOException error) {
+            throw new UncheckedIOException("No se pudo guardar el archivo", error);
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status != STATUS_COMMITTED) {
+                    try {
+                        storage.delete(attachment.getStorageKey());
+                    } catch (IOException ignored) {
+                        // queda huérfano; no afecta a nadie
+                    }
+                }
+            }
+        });
+        publish(ticket, actor, Action.ATTACHED, Map.of("attachmentId", attachment.getId(), "filename", filename,
+            "internal", internal));
+        return detail(ticket, actor, role);
+    }
+
+    /** Los mismos permisos que ver el ticket; los adjuntos internos no existen para el cliente. */
+    @Transactional(readOnly = true)
+    public Download download(UUID organizationId, AppUser actor, UUID attachmentId) {
+        Role role = access.require(organizationId, actor);
+        TicketAttachment attachment = attachments.findByIdAndOrganizationId(attachmentId, organizationId)
+            .filter(a -> role != Role.CUSTOMER || !a.isInternal())
+            .orElseThrow(() -> new NotFoundException("Adjunto no encontrado."));
+        load(organizationId, attachment.getTicketId(), actor, role);
+        try {
+            return new Download(attachment.getFilename(), attachment.getContentType(), attachment.getSizeBytes(),
+                storage.open(attachment.getStorageKey()));
+        } catch (IOException error) {
+            throw new NotFoundException("El archivo ya no está disponible.");
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<Snapshot> snapshot(UUID organizationId, UUID ticketId) {
+        return tickets.findByIdAndOrganizationId(ticketId, organizationId)
+            .map(t -> new Snapshot(t.getId(), t.getNumber(), t.getTitle(), t.getStatus(), t.getRequesterId(),
+                t.getAssigneeId()));
+    }
+
+    private static String sha256(byte[] content) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(content));
+        } catch (NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException(impossible);
+        }
+    }
+
     private boolean canTechnicianReassign(Ticket ticket, AppUser actor, UUID assigneeId) {
         boolean takingFreeTicket = ticket.getAssigneeId() == null && actor.getId().equals(assigneeId);
         boolean handingOverOwnTicket = actor.getId().equals(ticket.getAssigneeId());
@@ -292,6 +402,10 @@ public class Tickets {
             ids.add(ticket.getAssigneeId());
         }
         visible.forEach(c -> ids.add(c.getAuthorId()));
+        List<TicketAttachment> files = staff
+            ? attachments.findByTicketIdOrderByCreatedAt(ticket.getId())
+            : attachments.findByTicketIdAndInternalFalseOrderByCreatedAt(ticket.getId());
+        files.forEach(a -> ids.add(a.getUploaderId()));
         Map<UUID, AppUser> people = users.findAllById(ids);
         boolean open = !ticket.getStatus().isFinal();
         return new Detail(ticket.getId(), ticket.getNumber(), ticket.getTitle(), ticket.getDescription(),
@@ -301,7 +415,9 @@ public class Tickets {
             TicketWorkflow.allowed(ticket.getStatus(), role, isRequester(ticket, actor)),
             staff && open, open && canAssign(ticket, actor, role), open, staff && open,
             visible.stream().map(c -> new Comment(c.getId(), person(people, c.getAuthorId()), c.getBody(),
-                c.isInternal(), c.getCreatedAt())).toList());
+                c.isInternal(), c.getCreatedAt())).toList(),
+            files.stream().map(a -> new Attachment(a.getId(), a.getFilename(), a.getContentType(), a.getSizeBytes(),
+                person(people, a.getUploaderId()), a.isInternal(), a.getCreatedAt())).toList());
     }
 
     private static Person person(Map<UUID, AppUser> people, UUID id) {

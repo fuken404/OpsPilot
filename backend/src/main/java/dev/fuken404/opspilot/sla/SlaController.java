@@ -2,15 +2,13 @@ package dev.fuken404.opspilot.sla;
 
 import dev.fuken404.opspilot.identity.Users;
 import dev.fuken404.opspilot.incidents.TicketPriority;
+import dev.fuken404.opspilot.shared.InternalJobs;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
-import java.security.MessageDigest;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -28,14 +26,14 @@ class SlaController {
     private final SlaStatus status;
     private final SlaPolicies policies;
     private final SlaSweeper sweeper;
-    private final SlaProperties properties;
+    private final InternalJobs jobs;
     private final Users users;
 
-    SlaController(SlaStatus status, SlaPolicies policies, SlaSweeper sweeper, SlaProperties properties, Users users) {
+    SlaController(SlaStatus status, SlaPolicies policies, SlaSweeper sweeper, InternalJobs jobs, Users users) {
         this.status = status;
         this.policies = policies;
         this.sweeper = sweeper;
-        this.properties = properties;
+        this.jobs = jobs;
         this.users = users;
     }
 
@@ -66,17 +64,8 @@ class SlaController {
             body.resolutionMinutes(), body.businessHours());
     }
 
-    /** Lo llama el cron con un secreto propio. Sin secreto configurado, el endpoint no existe. */
     @PostMapping("/api/internal/sla/sweep")
-    ResponseEntity<SlaSweeper.Result> sweep(@RequestHeader(name = "X-Sweep-Token", required = false) String token) {
-        String expected = properties.sweepToken();
-        if (expected == null || expected.isBlank()) {
-            return ResponseEntity.notFound().build();
-        }
-        if (token == null || !MessageDigest.isEqual(expected.getBytes(StandardCharsets.UTF_8),
-            token.getBytes(StandardCharsets.UTF_8))) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-        return ResponseEntity.ok(sweeper.sweep());
+    ResponseEntity<SlaSweeper.Result> sweep(@RequestHeader(name = "X-Internal-Token", required = false) String token) {
+        return jobs.run(token, sweeper::sweep);
     }
 }

@@ -2,7 +2,7 @@
 
 Plataforma de gestión de incidentes de TI para varias empresas: tickets, responsables, prioridades y acuerdos de nivel de servicio (SLA), con aislamiento de datos por organización y auditoría.
 
-> En construcción por fases. Van las fases 1 a 4: **base**, **núcleo de incidentes**, **motor de SLA** y **tiempo real con tablero**. Ver [Plan](#plan).
+> En construcción por fases. Van las fases 1 a 5: **base**, **núcleo de incidentes**, **motor de SLA**, **tiempo real con tablero** y **correos con adjuntos**. Ver [Plan](#plan).
 
 ## Arquitectura
 
@@ -16,6 +16,7 @@ Monolito modular: un solo despliegue, con módulos que no pueden usar las clases
 | `sla` | Políticas, relojes de respuesta y resolución, calendario laboral y barrido |
 | `realtime` | WebSocket por organización y difusión entre instancias con Redis |
 | `dashboard` | Métricas del equipo (solo lectura) |
+| `notifications` | Avisos por correo con bandeja de salida y reintentos |
 | `audit` | Registro de solo agregar con cada cambio |
 | `shared` | Seguridad, errores, reloj y organización activa |
 
@@ -35,17 +36,20 @@ Monolito modular: un solo despliegue, con módulos que no pueden usar las clases
 - **SLA en horario laboral.** Cada ticket tiene dos relojes: primera respuesta y resolución. Cuentan de lunes a viernes de 8:00 a 18:00 (hora de Colombia) sin festivos; lo crítico cuenta las 24 horas. Los festivos se calculan, no se escriben a mano: fijos, trasladados al lunes (Ley Emiliani) y los que dependen de la Pascua.
 - **Pausas sin errores acumulados.** El vencimiento siempre es inicio + objetivo + minutos pausados, medidos con el mismo reloj. Esperar al cliente pausa la resolución; si el cliente reabre un ticket resuelto, el tiempo que estuvo resuelto no cuenta. Cambiar la prioridad solo recalcula.
 - **Barrido idempotente.** Avisa los relojes con el 80 % consumido y escala los vencidos a los administradores. Cada aviso queda marcado en el reloj y las filas se toman con `FOR UPDATE SKIP LOCKED`: dos barridos a la vez no duplican alertas (hay una prueba con dos hilos). Corre una transacción por organización, así que Row Level Security sigue aplicando.
-- **Quién dispara el barrido.** En local, un `@Scheduled` dentro de la app (perfil `demo`). En Vercel la API se apaga sin tráfico, así que lo llama GitHub Actions cada 5 minutos con un secreto propio (`X-Sweep-Token`).
+- **Quién dispara las tareas.** En local, `@Scheduled` dentro de la app (perfil `demo`). En Vercel la API se apaga sin tráfico, así que GitHub Actions llama cada 5 minutos al barrido de SLA y al envío de correos, con un secreto propio (`X-Internal-Token`).
 - **Tiempo real después del commit.** Los eventos salen con `@TransactionalEventListener`: nadie ve un cambio que luego se deshizo. Solo dicen qué cambió (ticket, acción, estado); la pantalla vuelve a pedir los datos a la API, que aplica los permisos de siempre.
 - **Quién recibe qué.** El equipo recibe todo lo de su organización; un cliente solo lo de sus propios tickets, y ni el aviso de una nota interna. Otra organización no recibe nada. Una prueba lo verifica con cuatro conexiones reales.
 - **WebSocket sin token en la URL.** El navegador no puede mandar `Authorization` al abrir un WebSocket y poner el token en la URL lo deja en los logs. Por eso el token va en el primer mensaje, se valida igual que en la API y la conexión se cierra cuando vence; el cliente se reconecta con espera creciente.
 - **Varias instancias.** Con `REALTIME_BROKER=redis`, cada evento pasa por un canal de Redis (Valkey en local, Upstash en producción) y cada instancia lo entrega a sus conexiones. La prueba de tiempo real corre contra Redis real.
 - **Tablero con SQL directo.** Un módulo de solo lectura que no toca las entidades de los demás; Row Level Security filtra igual. Paleta validada para daltonismo y tabla alternativa para lectores de pantalla.
+- **Correos con outbox transaccional.** Cada aviso se escribe en `email_outbox` en la misma transacción del cambio; un despachador lo envía después con `FOR UPDATE SKIP LOCKED` y reintentos con espera creciente (1, 2, 4… minutos; tras 8 intentos queda como fallido). Si el SMTP cae, el cambio se guarda igual y el correo sale cuando vuelva; si el cambio falla, no queda correo. Entrega al menos una vez.
+- **Correos sin contenido sensible.** Nunca se le escribe a quien hizo el cambio, el cliente no recibe avisos de notas internas y los correos no copian el texto de los comentarios: invitan a abrir el ticket, donde se aplican los permisos.
+- **Adjuntos con lista blanca.** El tipo se decide por los primeros bytes del archivo, no por lo que diga el navegador, y la extensión debe coincidir: un ejecutable renombrado a `.png` se rechaza, y también HTML y SVG, que pueden llevar código. Máximo 4 MB (Vercel limita el cuerpo a 4.5 MB). La descarga siempre es `attachment`, con `nosniff` y CSP `sandbox`, y pasa por la API para aplicar permisos; los adjuntos internos no existen para el cliente. Si la transacción falla, el archivo guardado se borra.
 - **Reloj inyectado.** Las pruebas adelantan el tiempo en vez de esperar horas.
 
 ## Stack
 
-Java 25 · Spring Boot 4.1 · Spring Security (OAuth 2.0 / OIDC) · Spring Modulith · WebSocket · JPA · Flyway · PostgreSQL 17 · Redis (Valkey) · Keycloak 26 · Angular 22 (Signals, standalone, zoneless) · Angular Material · Vitest · JUnit 5 · Testcontainers · Docker Compose · GitHub Actions
+Java 25 · Spring Boot 4.1 · Spring Security (OAuth 2.0 / OIDC) · Spring Modulith · WebSocket · JPA · Flyway · PostgreSQL 17 · Redis (Valkey) · Jakarta Mail · Keycloak 26 · Angular 22 (Signals, standalone, zoneless) · Angular Material · Vitest · JUnit 5 · Testcontainers · Docker Compose · GitHub Actions
 
 ## Correr en local
 
@@ -86,5 +90,5 @@ cd frontend && npx ng test --watch=false
 2. **Núcleo de incidentes** ✅ Tickets, estados, asignación, comentarios, auditoría y Row Level Security en Postgres.
 3. **Motor de SLA** ✅ Políticas por prioridad, calendario laboral con festivos, pausas, alertas y escalamiento.
 4. **Tiempo real** ✅ WebSockets por organización, difusión con Redis y tablero con métricas.
-5. **Notificaciones y adjuntos:** outbox transaccional, correos y archivos.
+5. **Notificaciones y adjuntos** ✅ Outbox transaccional, correos con reintentos y archivos validados.
 6. **Publicación:** Vercel, demo pública, Playwright y OpenAPI.

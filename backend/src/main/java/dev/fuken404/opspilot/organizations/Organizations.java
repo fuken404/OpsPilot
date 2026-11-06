@@ -61,6 +61,16 @@ public class Organizations {
         return organizations.findAll().stream().map(Organization::getId).toList();
     }
 
+    /** Para procesos del sistema (correos): ids de quienes tienen alguno de esos roles. */
+    @Transactional(readOnly = true)
+    public List<UUID> memberIds(UUID organizationId, Role... roles) {
+        List<Role> wanted = List.of(roles);
+        return memberships.findByOrganizationId(organizationId).stream()
+            .filter(m -> wanted.contains(m.getRole()))
+            .map(Membership::getUserId)
+            .toList();
+    }
+
     @Transactional(readOnly = true)
     public List<Member> members(UUID organizationId, AppUser actor) {
         access.require(organizationId, actor, Role.ADMIN, Role.TECHNICIAN);

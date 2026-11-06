@@ -20,6 +20,22 @@ spring:
     # Flyway abre su propia conexión con el usuario dueño, sin el cambio de rol de la app.
     user: ${spring.datasource.username}
     password: ${spring.datasource.password}
+  servlet:
+    multipart:
+      # Vercel limita el cuerpo de una petición a 4.5 MB: los adjuntos se quedan por debajo.
+      max-file-size: 4MB
+      max-request-size: 5MB
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:1025}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    default-encoding: UTF-8
+    properties:
+      mail.smtp.auth: ${SMTP_AUTH:false}
+      mail.smtp.starttls.enable: ${SMTP_STARTTLS:false}
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 10000
   data:
     redis:
       url: ${REDIS_URL:redis://localhost:6379}
@@ -44,10 +60,17 @@ opspilot:
     zone: ${SLA_ZONE:America/Bogota}
     opens: "08:00"
     closes: "18:00"
-    # Secreto del endpoint de barrido. Vacío: el endpoint no existe.
-    sweep-token: ${SLA_SWEEP_TOKEN:}
     scheduler-enabled: false
     sweep-interval: PT1M
+  # Secreto de los endpoints que llama el cron (barrido de SLA y envío de correos). Vacío: no existen.
+  internal-token: ${INTERNAL_JOBS_TOKEN:}
+  app-url: ${APP_URL:http://localhost:4200}
+  mail:
+    from: ${MAIL_FROM:OpsPilot <no-reply@opspilot.local>}
+    dispatcher-enabled: false
+  attachments:
+    max-bytes: 4194304
+    local-dir: ${ATTACHMENTS_DIR:${user.home}/.opspilot/attachments}
   realtime:
     # memory: una sola instancia. redis: varias instancias comparten los eventos por pub/sub.
     broker: ${REALTIME_BROKER:memory}
@@ -56,6 +79,9 @@ management:
   health:
     redis:
       # El tiempo real no es crítico: si Redis cae, la API sigue sana.
+      enabled: false
+    mail:
+      # Los correos esperan en la bandeja de salida: un SMTP caído no tumba la API.
       enabled: false
   endpoints:
     web:

@@ -60,6 +60,16 @@ export interface TicketComment {
   createdAt: string;
 }
 
+export interface TicketAttachment {
+  id: string;
+  filename: string;
+  contentType: string;
+  sizeBytes: number;
+  uploader: Person | null;
+  internal: boolean;
+  createdAt: string;
+}
+
 export interface TicketDetail extends TicketSummary {
   description: string;
   resolvedAt: string | null;
@@ -71,11 +81,12 @@ export interface TicketDetail extends TicketSummary {
   canComment: boolean;
   canCommentInternally: boolean;
   comments: TicketComment[];
+  attachments: TicketAttachment[];
 }
 
 export interface AuditEntry {
   id: string;
-  action: 'CREATED' | 'STATUS_CHANGED' | 'ASSIGNED' | 'TRIAGED' | 'COMMENTED' | 'SLA_WARNING' | 'SLA_BREACHED';
+  action: 'CREATED' | 'STATUS_CHANGED' | 'ASSIGNED' | 'TRIAGED' | 'COMMENTED' | 'ATTACHED' | 'SLA_WARNING' | 'SLA_BREACHED';
   actor: { id: string; displayName: string } | null;
   details: Record<string, unknown>;
   occurredAt: string;
@@ -175,4 +186,10 @@ export interface Dashboard {
   workload: { userId: string; displayName: string; role: Role; open: number; breached: number }[];
   trend: { date: string; created: number; resolved: number }[];
   averageResolutionHours: number | null;
+}
+
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }

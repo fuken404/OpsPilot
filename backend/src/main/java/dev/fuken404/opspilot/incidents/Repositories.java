@@ -17,3 +17,12 @@ interface TicketCommentRepository extends JpaRepository<TicketComment, UUID> {
 
     List<TicketComment> findByTicketIdAndInternalFalseOrderByCreatedAt(UUID ticketId);
 }
+
+interface TicketAttachmentRepository extends JpaRepository<TicketAttachment, UUID> {
+
+    List<TicketAttachment> findByTicketIdOrderByCreatedAt(UUID ticketId);
+
+    List<TicketAttachment> findByTicketIdAndInternalFalseOrderByCreatedAt(UUID ticketId);
+
+    Optional<TicketAttachment> findByIdAndOrganizationId(UUID id, UUID organizationId);
+}

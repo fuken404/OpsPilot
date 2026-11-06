@@ -16,7 +16,7 @@ import { PriorityChip, StatusChip } from '../core/chips';
 import { SlaApi } from '../core/sla-api';
 import { SlaBadge } from '../core/sla-badge';
 import {
-  AuditEntry, CATEGORIES, CATEGORY_LABELS, Member, PRIORITIES, PRIORITY_LABELS, SLA_KIND_LABELS, SlaClock, SlaKind,
+  AuditEntry, CATEGORIES, CATEGORY_LABELS, formatBytes, Member, TicketAttachment, PRIORITIES, PRIORITY_LABELS, SLA_KIND_LABELS, SlaClock, SlaKind,
   STATUS_ACTIONS, STATUS_LABELS, TicketCategory, TicketDetail, TicketPriority, TicketStatus,
 } from '../core/models';
 import { Realtime } from '../core/realtime';
@@ -74,6 +74,36 @@ import { TicketsApi } from '../core/tickets-api';
             </article>
           } @empty {
             <p class="muted">Aún no hay comentarios.</p>
+          }
+
+          @if (t.attachments.length > 0 || t.canComment) {
+            <h2>Adjuntos</h2>
+            <ul class="files">
+              @for (a of t.attachments; track a.id) {
+                <li [class.internal]="a.internal">
+                  <button mat-button type="button" (click)="download(a)" [attr.aria-label]="'Descargar ' + a.filename">
+                    {{ a.filename }}
+                  </button>
+                  <small>
+                    {{ size(a.sizeBytes) }} · {{ a.uploader?.displayName }} · {{ a.createdAt | date: "d MMM, HH:mm" }}
+                    @if (a.internal) { · <span class="tag">Interno</span> }
+                  </small>
+                </li>
+              } @empty {
+                <li class="muted">Sin adjuntos.</li>
+              }
+            </ul>
+            @if (t.canComment) {
+              <div class="upload">
+                <input #picker type="file" hidden (change)="upload(picker)"
+                       accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.docx,.xlsx,.zip,.txt,.log,.csv" />
+                <button mat-stroked-button type="button" [disabled]="busy()" (click)="picker.click()">Adjuntar archivo</button>
+                <small class="muted">Imágenes, PDF, Office, ZIP o texto. Máximo 4 MB.</small>
+                @if (t.canCommentInternally) {
+                  <mat-checkbox [ngModel]="internalFile()" (ngModelChange)="internalFile.set($event)">Interno</mat-checkbox>
+                }
+              </div>
+            }
           }
 
           @if (t.canComment) {
@@ -195,6 +225,11 @@ import { TicketsApi } from '../core/tickets-api';
     .author time { margin-left: auto; font: var(--mat-sys-body-small); opacity: .75; }
     .tag { font: var(--mat-sys-label-small); padding: 1px 8px; border-radius: 999px; box-shadow: inset 0 0 0 1px currentColor; }
     .body { margin: 0; }
+    .files { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+    .files li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+    .files li.internal button { color: var(--mat-sys-tertiary); }
+    .files small, .upload small { color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-body-small); }
+    .upload { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 8px; }
     .reply { display: flex; flex-direction: column; margin-top: 16px; }
     .actions { display: flex; align-items: center; justify-content: flex-end; gap: 16px; }
     .buttons { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -240,6 +275,7 @@ export class Ticket {
   protected readonly assignable = computed(() =>
     this.members().filter((m) => !m.pending && m.userId && m.role !== 'CUSTOMER'));
   protected readonly reply = signal('');
+  protected readonly internalFile = signal(false);
   protected readonly internal = signal(false);
   protected readonly liveNote = signal<string | null>(null);
   private loadedOrg: string | null = null;
@@ -329,6 +365,36 @@ export class Ticket {
     }
   }
 
+  protected size(bytes: number): string {
+    return formatBytes(bytes);
+  }
+
+  protected async upload(picker: HTMLInputElement): Promise<void> {
+    const file = picker.files?.[0];
+    picker.value = '';
+    if (!file) return;
+    if (file.size > 4 * 1024 * 1024) {
+      this.message.set('El archivo supera el máximo de 4 MB.');
+      return;
+    }
+    await this.update((t) => this.api.attach(this.org(), t, file, this.internalFile()));
+    if (!this.message()) this.internalFile.set(false);
+  }
+
+  protected async download(attachment: TicketAttachment): Promise<void> {
+    try {
+      const blob = await this.api.download(this.org(), attachment.id);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = attachment.filename;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      this.message.set(apiError(error, 'No se pudo descargar el archivo.'));
+    }
+  }
+
   /** Un 409 significa que alguien cambió el ticket: se muestra el aviso y se ofrece recargar. */
   private async update(action: (ticket: TicketDetail) => Promise<TicketDetail>): Promise<void> {
     const current = this.ticket();
@@ -371,6 +437,8 @@ export class Ticket {
       }
       case 'COMMENTED':
         return d['internal'] ? 'agregó una nota interna' : 'comentó';
+      case 'ATTACHED':
+        return `adjuntó ${d['filename']}${d['internal'] ? ' (interno)' : ''}`;
       case 'SLA_WARNING':
         return `avisó: el SLA de ${SLA_KIND_LABELS[d['kind'] as SlaKind].toLowerCase()} lleva el 80 % del tiempo`;
       case 'SLA_BREACHED':

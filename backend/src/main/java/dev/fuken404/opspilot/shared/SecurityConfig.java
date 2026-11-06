@@ -37,8 +37,8 @@ class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.GET, "/actuator/health", "/api/docs/**").permitAll()
-                // Lo llama un cron, no una persona: se protege con su propio secreto.
-                .requestMatchers(HttpMethod.POST, "/api/internal/sla/sweep").permitAll()
+                // Los llama un cron, no una persona: se protegen con su propio secreto (InternalJobs).
+                .requestMatchers(HttpMethod.POST, "/api/internal/**").permitAll()
                 // El navegador no puede mandar Authorization al abrir un WebSocket: el token va en el primer mensaje.
                 .requestMatchers(HttpMethod.GET, "/ws").permitAll()
                 .anyRequest().authenticated())

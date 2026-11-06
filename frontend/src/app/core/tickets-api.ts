@@ -55,6 +55,19 @@ export class TicketsApi {
       { version: ticket.version, priority, category }));
   }
 
+  attach(org: string, ticket: TicketDetail, file: File, internal: boolean): Promise<TicketDetail> {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('internal', String(internal));
+    return firstValueFrom(this.http.post<TicketDetail>(`${this.base(org)}/${ticket.id}/attachments`, form));
+  }
+
+  /** Con el token de la sesión: un enlace directo no lo llevaría. */
+  download(org: string, attachmentId: string): Promise<Blob> {
+    return firstValueFrom(this.http.get(`${environment.apiUrl}/organizations/${org}/attachments/${attachmentId}`,
+      { responseType: 'blob' }));
+  }
+
   comment(org: string, ticket: TicketDetail, body: string, internal: boolean): Promise<TicketDetail> {
     return firstValueFrom(this.http.post<TicketDetail>(`${this.base(org)}/${ticket.id}/comments`, { body, internal }));
   }

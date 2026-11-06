@@ -10,14 +10,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.jayway.jsonpath.JsonPath;
+import dev.fuken404.opspilot.MutableClock;
 import dev.fuken404.opspilot.TestcontainersConfiguration;
 import dev.fuken404.opspilot.organizations.Organizations;
 import dev.fuken404.opspilot.organizations.Role;
-import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -30,11 +29,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
@@ -43,42 +39,12 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /** El tiempo lo controla la prueba: se adelanta el reloj en vez de esperar horas. */
-@Import({TestcontainersConfiguration.class, SlaApiTests.ClockConfig.class})
-@SpringBootTest(properties = "opspilot.sla.sweep-token=token-de-prueba")
+@Import({TestcontainersConfiguration.class, MutableClock.Config.class})
+@SpringBootTest(properties = "opspilot.internal-token=token-de-prueba")
 @AutoConfigureMockMvc
 class SlaApiTests {
 
     static final ZoneId BOGOTA = ZoneId.of("America/Bogota");
-
-    static class MutableClock extends Clock {
-
-        volatile Instant now;
-
-        @Override
-        public ZoneId getZone() {
-            return ZoneOffset.UTC;
-        }
-
-        @Override
-        public Clock withZone(ZoneId zone) {
-            return this;
-        }
-
-        @Override
-        public Instant instant() {
-            return now;
-        }
-    }
-
-    @TestConfiguration(proxyBeanMethods = false)
-    static class ClockConfig {
-
-        @Bean
-        @Primary
-        MutableClock testClock() {
-            return new MutableClock();
-        }
-    }
 
     @Autowired
     MockMvc mvc;
@@ -145,7 +111,7 @@ class SlaApiTests {
     ResultActions sweep(String token) throws Exception {
         var request = post("/api/internal/sla/sweep");
         if (token != null) {
-            request.header("X-Sweep-Token", token);
+            request.header("X-Internal-Token", token);
         }
         return mvc.perform(request);
     }

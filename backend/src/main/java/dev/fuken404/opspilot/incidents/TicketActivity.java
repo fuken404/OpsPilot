@@ -17,6 +17,6 @@ public record TicketActivity(UUID organizationId, UUID ticketId, UUID actorId, A
     }
 
     public enum Action {
-        CREATED, STATUS_CHANGED, ASSIGNED, TRIAGED, COMMENTED
+        CREATED, STATUS_CHANGED, ASSIGNED, TRIAGED, COMMENTED, ATTACHED
     }
 }
