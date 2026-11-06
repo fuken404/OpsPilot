@@ -36,7 +36,7 @@ Monolito modular: un solo despliegue, con módulos que no pueden usar las clases
 - **SLA en horario laboral.** Cada ticket tiene dos relojes: primera respuesta y resolución. Cuentan de lunes a viernes de 8:00 a 18:00 (hora de Colombia) sin festivos; lo crítico cuenta las 24 horas. Los festivos se calculan, no se escriben a mano: fijos, trasladados al lunes (Ley Emiliani) y los que dependen de la Pascua.
 - **Pausas sin errores acumulados.** El vencimiento siempre es inicio + objetivo + minutos pausados, medidos con el mismo reloj. Esperar al cliente pausa la resolución; si el cliente reabre un ticket resuelto, el tiempo que estuvo resuelto no cuenta. Cambiar la prioridad solo recalcula.
 - **Barrido idempotente.** Avisa los relojes con el 80 % consumido y escala los vencidos a los administradores. Cada aviso queda marcado en el reloj y las filas se toman con `FOR UPDATE SKIP LOCKED`: dos barridos a la vez no duplican alertas (hay una prueba con dos hilos). Corre una transacción por organización, así que Row Level Security sigue aplicando.
-- **Quién dispara las tareas.** En local, `@Scheduled` dentro de la app (perfil `demo`). En Vercel la API se apaga sin tráfico, así que GitHub Actions llama cada 5 minutos al barrido de SLA y al envío de correos, con un secreto propio (`X-Internal-Token`).
+- **Tareas programadas dentro de la app.** El barrido de SLA y el envío de correos corren con `@Scheduled` porque el servidor está siempre encendido. Si algún día la API corre en una plataforma que se apaga sin tráfico, los mismos trabajos existen como endpoints protegidos con un secreto propio (`X-Internal-Token`) para llamarlos desde un cron.
 - **Tiempo real después del commit.** Los eventos salen con `@TransactionalEventListener`: nadie ve un cambio que luego se deshizo. Solo dicen qué cambió (ticket, acción, estado); la pantalla vuelve a pedir los datos a la API, que aplica los permisos de siempre.
 - **Quién recibe qué.** El equipo recibe todo lo de su organización; un cliente solo lo de sus propios tickets, y ni el aviso de una nota interna. Otra organización no recibe nada. Una prueba lo verifica con cuatro conexiones reales.
 - **WebSocket sin token en la URL.** El navegador no puede mandar `Authorization` al abrir un WebSocket y poner el token en la URL lo deja en los logs. Por eso el token va en el primer mensaje, se valida igual que en la API y la conexión se cierra cuando vence; el cliente se reconecta con espera creciente.
@@ -50,7 +50,23 @@ Monolito modular: un solo despliegue, con módulos que no pueden usar las clases
 
 ## Stack
 
-Java 25 · Spring Boot 4.1 · Spring Security (OAuth 2.0 / OIDC) · Spring Modulith · WebSocket · JPA · Flyway · PostgreSQL 17 · Redis (Valkey) · Jakarta Mail · Keycloak 26 · Angular 22 (Signals, standalone, zoneless) · Angular Material · Vitest · JUnit 5 · Testcontainers · Docker Compose · GitHub Actions
+Java 25 · Spring Boot 4.1 · Spring Security (OAuth 2.0 / OIDC) · Spring Modulith · WebSocket · JPA · Flyway · PostgreSQL 17 · Redis (Valkey) · Jakarta Mail · Keycloak 26 · Angular 22 (Signals, standalone, zoneless) · Angular Material · Vitest · JUnit 5 · Testcontainers · Docker Compose · Caddy · GitHub Actions · Oracle Cloud · Vercel
+
+## Despliegue
+
+| Pieza | Dónde |
+|---|---|
+| Frontend (Angular) | Vercel, con CSP estricta y cabeceras de seguridad |
+| API, Keycloak, PostgreSQL, Valkey | Una máquina ARM de Oracle Cloud Always Free con Docker Compose |
+| HTTPS | Caddy con certificados automáticos de Let's Encrypt |
+| Copias | Diarias (bases y adjuntos), 7 días en el servidor y opcionalmente en Oracle Object Storage |
+
+- **Por qué no todo en Vercel.** El plan gratuito de Vercel incluye 4 horas de CPU y 360 GB-hora de memoria al mes, y apaga los contenedores a los 5 minutos sin tráfico. Una app con WebSockets, relojes de SLA y Keycloak necesita estar encendida: en contenedores efímeros tendría arranques de 10 a 20 s y riesgo de pausa del proyecto.
+- **Despliegue continuo.** Cuando el CI pasa en `main`, GitHub Actions construye las imágenes en un runner ARM, las publica en GitHub Container Registry y actualiza el servidor por SSH. El token del registro viaja por la entrada estándar y se cierra la sesión al terminar.
+- **Superficie mínima.** Solo Caddy expone puertos. La consola de administración de Keycloak responde 404 desde internet y se usa por un túnel SSH.
+- **Demo con datos.** Las cuentas de demostración tienen un `sub` fijo en el realm, así que la API siembra sus tickets antes del primer ingreso.
+
+Los archivos están en [`deploy/`](deploy/) y la guía paso a paso en [`deploy/GUIA.md`](deploy/GUIA.md).
 
 ## Correr en local
 
@@ -92,4 +108,4 @@ cd frontend && npx ng test --watch=false
 3. **Motor de SLA** ✅ Políticas por prioridad, calendario laboral con festivos, pausas, alertas y escalamiento.
 4. **Tiempo real** ✅ WebSockets por organización, difusión con Redis y tablero con métricas.
 5. **Notificaciones y adjuntos** ✅ Outbox transaccional, correos con reintentos y archivos validados.
-6. **Publicación:** Vercel, demo pública, Playwright y OpenAPI.
+6. **Publicación:** Oracle Cloud + Vercel, despliegue continuo, demo pública, Playwright y OpenAPI.

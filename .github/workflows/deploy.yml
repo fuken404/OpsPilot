@@ -1,0 +1,97 @@
+name: Despliegue
+
+# Solo despliega lo que pasó el CI en main. Construye las imágenes en un runner ARM (igual que el
+# servidor de Oracle), las publica en GitHub Container Registry y actualiza el servidor por SSH.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: despliegue
+  cancel-in-progress: false
+
+jobs:
+  images:
+    # Hasta configurar el servidor (variable DEPLOY_HOST) no hay a dónde desplegar.
+    if: vars.DEPLOY_HOST != '' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - id: tag
+        run: echo "tag=$(git rev-parse --short=12 HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Imagen de la API
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          push: true
+          tags: |
+            ghcr.io/fuken404/opspilot-api:${{ steps.tag.outputs.tag }}
+            ghcr.io/fuken404/opspilot-api:latest
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+      - name: Imagen de Keycloak
+        uses: docker/build-push-action@v6
+        with:
+          context: infra/keycloak
+          push: true
+          tags: |
+            ghcr.io/fuken404/opspilot-keycloak:${{ steps.tag.outputs.tag }}
+            ghcr.io/fuken404/opspilot-keycloak:latest
+          cache-from: type=gha,scope=keycloak
+          cache-to: type=gha,mode=max,scope=keycloak
+
+  deploy:
+    needs: images
+    runs-on: ubuntu-latest
+    environment: produccion
+    permissions:
+      contents: read
+      packages: read
+    env:
+      HOST: ${{ vars.DEPLOY_HOST }}
+      USER_NAME: ${{ vars.DEPLOY_USER || 'ubuntu' }}
+      TAG: ${{ needs.images.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - name: Llave SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
+          echo "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+      - name: Copiar archivos de despliegue
+        run: scp -q deploy/compose.prod.yaml deploy/Caddyfile deploy/backup.sh deploy/deploy.sh deploy/postgres-init.sql deploy/realm.template.json "$USER_NAME@$HOST:/opt/opspilot/"
+      - name: Actualizar el servidor
+        env:
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # El token viaja por la entrada estándar, no en la línea de comandos del servidor.
+        run: |
+          printf '%s' "$REGISTRY_TOKEN" | ssh "$USER_NAME@$HOST" \
+            "docker login ghcr.io -u '${{ github.actor }}' --password-stdin > /dev/null \
+             && /opt/opspilot/deploy.sh '$TAG'; status=\$?; docker logout ghcr.io > /dev/null; exit \$status"
+      - name: Comprobar que responde
+        run: |
+          for i in $(seq 1 40); do
+            if curl -fsS "https://${{ vars.API_HOST || 'api.opspilot.fuken404.dev' }}/actuator/health" | grep -q UP; then
+              echo "La API está arriba"; exit 0
+            fi
+            sleep 6
+          done
+          echo "La API no respondió a tiempo"; exit 1

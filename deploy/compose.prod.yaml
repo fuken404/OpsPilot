@@ -55,6 +55,10 @@ services:
       KC_HTTP_ENABLED: "true"
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      # La consola de administración solo se abre por un túnel SSH (http://localhost:8080/admin).
+      KC_HOSTNAME_ADMIN: http://localhost:8080
+    ports:
+      - "127.0.0.1:8080:8080"
     volumes:
       - ./realm.json:/opt/keycloak/data/import/opspilot-realm.json:ro
     mem_limit: 1536m
@@ -92,6 +96,8 @@ services:
   mailpit:
     image: axllent/mailpit:v1.27
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025"
     mem_limit: 128m
 
   backup:
