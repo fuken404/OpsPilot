@@ -23,6 +23,9 @@ import { ROLE_LABELS } from '../core/models';
         }
         <nav>
           <a mat-button routerLink="/app" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Inicio</a>
+          @if (session.organization()) {
+            <a mat-button routerLink="/app/tickets" routerLinkActive="active">Tickets</a>
+          }
           @if (session.can('ADMIN', 'TECHNICIAN')) {
             <a mat-button routerLink="/app/equipo" routerLinkActive="active">Equipo</a>
           }
@@ -52,6 +55,12 @@ import { ROLE_LABELS } from '../core/models';
     .active { background: var(--mat-sys-secondary-container); }
     .content { max-width: 1100px; margin: 0 auto; padding: 24px; }
     .error { color: var(--mat-sys-error); }
+    @media (max-width: 600px) {
+      .bar { gap: 4px; padding: 8px 12px; }
+      .org { width: 150px; }
+      .who { display: none; }
+      .content { padding: 16px; }
+    }
   `,
 })
 export class Shell implements OnInit {

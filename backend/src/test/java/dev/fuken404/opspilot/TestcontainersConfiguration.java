@@ -12,7 +12,9 @@ public class TestcontainersConfiguration {
 	@Bean
 	@ServiceConnection
 	public PostgreSQLContainer postgresContainer() {
-		return new PostgreSQLContainer(DockerImageName.parse("postgres:17-alpine"));
+		// Mismas credenciales que en local: Flyway migra con este usuario y la app cambia a opspilot_app.
+		return new PostgreSQLContainer(DockerImageName.parse("postgres:17-alpine"))
+			.withDatabaseName("opspilot").withUsername("opspilot").withPassword("opspilot");
 	}
 
 }

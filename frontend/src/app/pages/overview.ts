@@ -1,19 +1,30 @@
 import { Component, inject } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { RouterLink } from '@angular/router';
 import { ROLE_LABELS } from '../core/models';
 import { Session } from '../core/session';
 
 @Component({
   selector: 'app-overview',
-  imports: [MatCardModule],
+  imports: [MatCardModule, MatButtonModule, RouterLink],
   template: `
     @if (session.organization(); as org) {
       <h1>{{ org.name }}</h1>
       <p class="muted">Tu rol aquí: <strong>{{ labels[org.role] }}</strong>.</p>
       <mat-card appearance="outlined">
         <mat-card-content>
-          Los tickets, el SLA y el tablero en tiempo real llegan en las siguientes fases.
+          @if (session.can('CUSTOMER')) {
+            Reporta un problema y sigue su avance; el equipo de soporte te responde en el mismo ticket.
+          } @else {
+            Revisa los tickets abiertos, toma los que no tienen responsable y deja notas internas para el equipo.
+          }
+          El SLA y el tablero en tiempo real llegan en las siguientes fases.
         </mat-card-content>
+        <mat-card-actions>
+          <a mat-button routerLink="/app/tickets">Ver tickets</a>
+          <a mat-button routerLink="/app/tickets/nuevo">Nuevo ticket</a>
+        </mat-card-actions>
       </mat-card>
     } @else {
       <h1>Aún no perteneces a ninguna organización</h1>

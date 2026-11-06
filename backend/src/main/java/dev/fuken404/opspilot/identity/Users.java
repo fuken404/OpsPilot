@@ -2,8 +2,12 @@ package dev.fuken404.opspilot.identity;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
@@ -50,5 +54,9 @@ public class Users {
 
     public Optional<AppUser> findById(UUID id) {
         return repository.findById(id);
+    }
+
+    public Map<UUID, AppUser> findAllById(Collection<UUID> ids) {
+        return repository.findAllById(ids).stream().collect(Collectors.toMap(AppUser::getId, Function.identity()));
     }
 }

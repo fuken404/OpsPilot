@@ -8,12 +8,24 @@ spring:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5436/opspilot}
     username: ${DATABASE_USERNAME:opspilot}
     password: ${DATABASE_PASSWORD:opspilot}
+    hikari:
+      # Cada conexión de la app actúa como opspilot_app: Row Level Security se aplica siempre.
+      connection-init-sql: set role opspilot_app
   jpa:
     open-in-view: false
     hibernate:
       ddl-auto: validate
   flyway:
     locations: classpath:db/migration
+    # Flyway abre su propia conexión con el usuario dueño, sin el cambio de rol de la app.
+    user: ${spring.datasource.username}
+    password: ${spring.datasource.password}
+  modulith:
+    events:
+      jdbc:
+        # La tabla de eventos la crea Flyway (V2); la app no tiene permiso para crear tablas.
+        schema-initialization:
+          enabled: false
   security:
     oauth2:
       resourceserver:
