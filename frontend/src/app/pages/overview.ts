@@ -15,11 +15,11 @@ import { Session } from '../core/session';
       <mat-card appearance="outlined">
         <mat-card-content>
           @if (session.can('CUSTOMER')) {
-            Reporta un problema y sigue su avance; el equipo de soporte te responde en el mismo ticket.
+            Reporta un problema y sigue su avance; el equipo de soporte te responde en el mismo ticket y cada ticket muestra el plazo comprometido.
           } @else {
-            Revisa los tickets abiertos, toma los que no tienen responsable y deja notas internas para el equipo.
+            Revisa los tickets abiertos y cuánto les queda de SLA, toma los que no tienen responsable y deja notas internas para el equipo.
           }
-          El SLA y el tablero en tiempo real llegan en las siguientes fases.
+          El tablero en tiempo real llega en la siguiente fase.
         </mat-card-content>
         <mat-card-actions>
           <a mat-button routerLink="/app/tickets">Ver tickets</a>

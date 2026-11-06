@@ -137,6 +137,12 @@ public class Tickets {
         return detail(load(organizationId, ticketId, actor, role), actor, role);
     }
 
+    /** Para otros módulos: falla con 404 si la persona no puede ver ese ticket. */
+    @Transactional(readOnly = true)
+    public void requireVisible(UUID organizationId, AppUser actor, UUID ticketId) {
+        load(organizationId, ticketId, actor, access.require(organizationId, actor));
+    }
+
     @Transactional
     public Detail changeStatus(UUID organizationId, AppUser actor, UUID ticketId, long version, TicketStatus target) {
         Role role = access.require(organizationId, actor);
@@ -270,7 +276,9 @@ public class Tickets {
     }
 
     private void publish(Ticket ticket, AppUser actor, Action action, Map<String, Object> details) {
-        events.publishEvent(new TicketActivity(ticket.getOrganizationId(), ticket.getId(), actor.getId(), action, details));
+        Instant at = action == Action.CREATED ? ticket.getCreatedAt() : now();
+        events.publishEvent(new TicketActivity(ticket.getOrganizationId(), ticket.getId(), actor.getId(), action, details,
+            ticket.getStatus(), ticket.getPriority(), at));
     }
 
     private Detail detail(Ticket ticket, AppUser actor, Role role) {

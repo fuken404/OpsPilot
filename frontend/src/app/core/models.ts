@@ -75,7 +75,7 @@ export interface TicketDetail extends TicketSummary {
 
 export interface AuditEntry {
   id: string;
-  action: 'CREATED' | 'STATUS_CHANGED' | 'ASSIGNED' | 'TRIAGED' | 'COMMENTED';
+  action: 'CREATED' | 'STATUS_CHANGED' | 'ASSIGNED' | 'TRIAGED' | 'COMMENTED' | 'SLA_WARNING' | 'SLA_BREACHED';
   actor: { id: string; displayName: string } | null;
   details: Record<string, unknown>;
   occurredAt: string;
@@ -117,3 +117,49 @@ export const CATEGORY_LABELS: Record<TicketCategory, string> = {
 
 export const PRIORITIES = Object.keys(PRIORITY_LABELS) as TicketPriority[];
 export const CATEGORIES = Object.keys(CATEGORY_LABELS) as TicketCategory[];
+
+export type SlaKind = 'RESPONSE' | 'RESOLUTION';
+export type SlaState = 'RUNNING' | 'AT_RISK' | 'BREACHED' | 'PAUSED' | 'MET' | 'STOPPED';
+
+export interface SlaClock {
+  ticketId: string;
+  kind: SlaKind;
+  state: SlaState;
+  targetMinutes: number;
+  businessHours: boolean;
+  startedAt: string;
+  dueAt: string | null;
+  metAt: string | null;
+  pausedSince: string | null;
+  breachedAt: string | null;
+  remainingMinutes: number | null;
+  late: boolean;
+}
+
+export interface SlaPolicy {
+  priority: TicketPriority;
+  responseMinutes: number;
+  resolutionMinutes: number;
+  businessHours: boolean;
+}
+
+export const SLA_KIND_LABELS: Record<SlaKind, string> = {
+  RESPONSE: 'Primera respuesta',
+  RESOLUTION: 'Resolución',
+};
+
+/**
+ * "2 h 15 min", "45 min", "3 d 2 h". Sin días para tiempos laborales: 24 h hábiles no son un día,
+ * son casi tres jornadas.
+ */
+export function formatMinutes(total: number, withDays = true): string {
+  const minutes = Math.abs(Math.round(total));
+  const days = withDays ? Math.floor(minutes / 1440) : 0;
+  const hours = Math.floor((minutes - days * 1440) / 60);
+  const rest = minutes % 60;
+  const parts: string[] = [];
+  if (days) parts.push(`${days} d`);
+  if (hours) parts.push(`${hours} h`);
+  if (rest && !days) parts.push(`${rest} min`);
+  return parts.length ? parts.join(' ') : '0 min';
+}

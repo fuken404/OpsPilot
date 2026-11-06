@@ -37,6 +37,8 @@ class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.GET, "/actuator/health", "/api/docs/**").permitAll()
+                // Lo llama un cron, no una persona: se protege con su propio secreto.
+                .requestMatchers(HttpMethod.POST, "/api/internal/sla/sweep").permitAll()
                 .anyRequest().authenticated())
             .oauth2ResourceServer(oauth -> oauth.jwt(Customizer.withDefaults()))
             .build();

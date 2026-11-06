@@ -55,6 +55,12 @@ public class Organizations {
             .toList();
     }
 
+    /** Para procesos de sistema que recorren todas las organizaciones, como el barrido de SLA. */
+    @Transactional(readOnly = true)
+    public List<UUID> allIds() {
+        return organizations.findAll().stream().map(Organization::getId).toList();
+    }
+
     @Transactional(readOnly = true)
     public List<Member> members(UUID organizationId, AppUser actor) {
         access.require(organizationId, actor, Role.ADMIN, Role.TECHNICIAN);

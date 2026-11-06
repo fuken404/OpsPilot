@@ -27,6 +27,7 @@ import { ROLE_LABELS } from '../core/models';
             <a mat-button routerLink="/app/tickets" routerLinkActive="active">Tickets</a>
           }
           @if (session.can('ADMIN', 'TECHNICIAN')) {
+            <a mat-button routerLink="/app/sla" routerLinkActive="active">SLA</a>
             <a mat-button routerLink="/app/equipo" routerLinkActive="active">Equipo</a>
           }
         </nav>

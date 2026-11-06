@@ -1,0 +1,4 @@
+opspilot:
+  sla:
+    # En local el barrido corre dentro de la app. En Vercel lo dispara GitHub Actions.
+    scheduler-enabled: true

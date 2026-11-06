@@ -5,9 +5,11 @@ import dev.fuken404.opspilot.identity.Users;
 import dev.fuken404.opspilot.incidents.TicketActivity;
 import dev.fuken404.opspilot.organizations.OrganizationAccess;
 import dev.fuken404.opspilot.organizations.Role;
+import dev.fuken404.opspilot.sla.SlaAlert;
 import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -55,6 +57,20 @@ public class AuditLog {
                 values (?, ?, ?, 'TICKET', ?, ?, ?::jsonb, ?)""",
             UUID.randomUUID(), activity.organizationId(), activity.actorId(), activity.ticketId(),
             activity.action().name(), json.writeValueAsString(activity.details()), Timestamp.from(Instant.now(clock)));
+    }
+
+    /** Alertas del barrido de SLA: no tienen autor, las genera el sistema. */
+    @EventListener
+    @Transactional(propagation = Propagation.MANDATORY)
+    void on(SlaAlert alert) {
+        Map<String, Object> details = new LinkedHashMap<>();
+        details.put("kind", alert.kind());
+        details.put("dueAt", alert.dueAt());
+        jdbc.update("""
+                insert into audit_event (id, organization_id, actor_id, entity_type, entity_id, action, details, occurred_at)
+                values (?, ?, null, 'TICKET', ?, ?, ?::jsonb, ?)""",
+            UUID.randomUUID(), alert.organizationId(), alert.ticketId(), "SLA_" + alert.level().name(),
+            json.writeValueAsString(details), Timestamp.from(alert.occurredAt()));
     }
 
     /** Historial de un ticket, solo para el equipo: incluye la existencia de notas internas. */

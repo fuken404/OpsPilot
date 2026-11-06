@@ -13,9 +13,11 @@ import { firstValueFrom, map } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { apiError } from '../core/api-error';
 import { PriorityChip, StatusChip } from '../core/chips';
+import { SlaApi } from '../core/sla-api';
+import { SlaBadge } from '../core/sla-badge';
 import {
-  AuditEntry, CATEGORIES, CATEGORY_LABELS, Member, PRIORITIES, PRIORITY_LABELS, STATUS_ACTIONS, STATUS_LABELS,
-  TicketCategory, TicketDetail, TicketPriority, TicketStatus,
+  AuditEntry, CATEGORIES, CATEGORY_LABELS, Member, PRIORITIES, PRIORITY_LABELS, SLA_KIND_LABELS, SlaClock, SlaKind,
+  STATUS_ACTIONS, STATUS_LABELS, TicketCategory, TicketDetail, TicketPriority, TicketStatus,
 } from '../core/models';
 import { Session } from '../core/session';
 import { TicketsApi } from '../core/tickets-api';
@@ -23,7 +25,7 @@ import { TicketsApi } from '../core/tickets-api';
 @Component({
   selector: 'app-ticket',
   imports: [FormsModule, DatePipe, RouterLink, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatInputModule,
-    MatSelectModule, StatusChip, PriorityChip],
+    MatSelectModule, StatusChip, PriorityChip, SlaBadge],
   template: `
     <a mat-button routerLink="/app/tickets">← Tickets</a>
 
@@ -90,6 +92,23 @@ import { TicketsApi } from '../core/tickets-api';
         </section>
 
         <aside>
+          @if (sla().length > 0) {
+            <h2>SLA</h2>
+            <dl class="sla">
+              @for (c of sla(); track c.kind) {
+                <div>
+                  <dt>{{ slaLabels[c.kind] }}</dt>
+                  <dd>
+                    <app-sla-badge [clock]="c" />
+                    @if (c.dueAt && c.state !== 'MET' && c.state !== 'STOPPED') {
+                      <small>Límite: {{ c.dueAt | date: "EEE d MMM, HH:mm" }}{{ c.businessHours ? '' : ' · 24/7' }}</small>
+                    }
+                  </dd>
+                </div>
+              }
+            </dl>
+          }
+
           @if (t.nextStatuses.length > 0) {
             <h2>Estado</h2>
             <div class="buttons">
@@ -175,6 +194,10 @@ import { TicketsApi } from '../core/tickets-api';
     .reply { display: flex; flex-direction: column; margin-top: 16px; }
     .actions { display: flex; align-items: center; justify-content: flex-end; gap: 16px; }
     .buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+    .sla { margin: 0; display: flex; flex-direction: column; gap: 10px; }
+    .sla dt { font: var(--mat-sys-label-medium); color: var(--mat-sys-on-surface-variant); }
+    .sla dd { margin: 2px 0 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+    .sla small { color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-body-small); }
     .history { list-style: none; padding: 0; margin: 0; font: var(--mat-sys-body-small); }
     .history li { padding: 6px 0; border-bottom: 1px solid var(--mat-sys-outline-variant); }
     .history time { display: block; color: var(--mat-sys-on-surface-variant); }
@@ -189,6 +212,7 @@ import { TicketsApi } from '../core/tickets-api';
 export class Ticket {
   protected readonly session = inject(Session);
   private readonly api = inject(TicketsApi);
+  private readonly slaApi = inject(SlaApi);
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private readonly id = toSignal(inject(ActivatedRoute).paramMap.pipe(map((p) => p.get('id')!)));
@@ -198,6 +222,8 @@ export class Ticket {
   protected readonly priorities = PRIORITIES;
   protected readonly priorityLabels = PRIORITY_LABELS;
   protected readonly statusActions = STATUS_ACTIONS;
+  protected readonly slaLabels = SLA_KIND_LABELS;
+  protected readonly sla = signal<SlaClock[]>([]);
 
   protected readonly ticket = signal<TicketDetail | null>(null);
   protected readonly history = signal<AuditEntry[]>([]);
@@ -233,8 +259,9 @@ export class Ticket {
 
   private async load(org: string, id: string): Promise<void> {
     try {
-      const ticket = await this.api.get(org, id);
+      const [ticket, sla] = await Promise.all([this.api.get(org, id), this.slaApi.ticket(org, id)]);
       this.ticket.set(ticket);
+      this.sla.set(sla);
       this.notFound.set(false);
       if (this.session.can('ADMIN', 'TECHNICIAN')) {
         const [history, members] = await Promise.all([
@@ -286,6 +313,7 @@ export class Ticket {
     this.stale.set(false);
     try {
       this.ticket.set(await action(current));
+      this.sla.set(await this.slaApi.ticket(this.org(), current.id));
       if (this.session.can('ADMIN', 'TECHNICIAN')) {
         this.history.set(await this.api.history(this.org(), current.id));
       }
@@ -318,6 +346,10 @@ export class Ticket {
       }
       case 'COMMENTED':
         return d['internal'] ? 'agregó una nota interna' : 'comentó';
+      case 'SLA_WARNING':
+        return `avisó: el SLA de ${SLA_KIND_LABELS[d['kind'] as SlaKind].toLowerCase()} lleva el 80 % del tiempo`;
+      case 'SLA_BREACHED':
+        return `escaló a los administradores: venció el SLA de ${SLA_KIND_LABELS[d['kind'] as SlaKind].toLowerCase()}`;
     }
   }
 

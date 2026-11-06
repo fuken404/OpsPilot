@@ -37,6 +37,14 @@ opspilot:
     # El token debe ir dirigido a esta API: un token emitido para otra aplicación del mismo realm no sirve.
     audience: ${OIDC_AUDIENCE:opspilot-api}
     allowed-origins: ${ALLOWED_ORIGINS:http://localhost:4200}
+  sla:
+    zone: ${SLA_ZONE:America/Bogota}
+    opens: "08:00"
+    closes: "18:00"
+    # Secreto del endpoint de barrido. Vacío: el endpoint no existe.
+    sweep-token: ${SLA_SWEEP_TOKEN:}
+    scheduler-enabled: false
+    sweep-interval: PT1M
 
 management:
   endpoints:

@@ -2,7 +2,7 @@
 
 Plataforma de gestión de incidentes de TI para varias empresas: tickets, responsables, prioridades y acuerdos de nivel de servicio (SLA), con aislamiento de datos por organización y auditoría.
 
-> En construcción por fases. Van la **fase 1: base** y la **fase 2: núcleo de incidentes**. Ver [Plan](#plan).
+> En construcción por fases. Van las fases 1 a 3: **base**, **núcleo de incidentes** y **motor de SLA**. Ver [Plan](#plan).
 
 ## Arquitectura
 
@@ -13,6 +13,7 @@ Monolito modular: un solo despliegue, con módulos que no pueden usar las clases
 | `identity` | Usuarios de la aplicación, creados en su primer ingreso |
 | `organizations` | Organizaciones, miembros, roles e invitaciones |
 | `incidents` | Tickets, estados, asignación y comentarios |
+| `sla` | Políticas, relojes de respuesta y resolución, calendario laboral y barrido |
 | `audit` | Registro de solo agregar con cada cambio |
 | `shared` | Seguridad, errores, reloj y organización activa |
 
@@ -29,7 +30,11 @@ Monolito modular: un solo despliegue, con módulos que no pueden usar las clases
 - **Notas internas.** El cliente nunca recibe las notas del equipo ni el historial, y crea con prioridad media: la prioridad define el SLA y la decide el equipo.
 - **Auditoría en la misma transacción.** Si el cambio se guarda, su registro también; si falla, ninguno. El rol de la app no puede editar ni borrar la tabla de auditoría.
 - **Numeración sin huecos por organización** (Acme #1, #2…) con un contador que se bloquea mientras dura la transacción.
-- **Reloj inyectado.** Prepara el motor de SLA para probarse sin esperar.
+- **SLA en horario laboral.** Cada ticket tiene dos relojes: primera respuesta y resolución. Cuentan de lunes a viernes de 8:00 a 18:00 (hora de Colombia) sin festivos; lo crítico cuenta las 24 horas. Los festivos se calculan, no se escriben a mano: fijos, trasladados al lunes (Ley Emiliani) y los que dependen de la Pascua.
+- **Pausas sin errores acumulados.** El vencimiento siempre es inicio + objetivo + minutos pausados, medidos con el mismo reloj. Esperar al cliente pausa la resolución; si el cliente reabre un ticket resuelto, el tiempo que estuvo resuelto no cuenta. Cambiar la prioridad solo recalcula.
+- **Barrido idempotente.** Avisa los relojes con el 80 % consumido y escala los vencidos a los administradores. Cada aviso queda marcado en el reloj y las filas se toman con `FOR UPDATE SKIP LOCKED`: dos barridos a la vez no duplican alertas (hay una prueba con dos hilos). Corre una transacción por organización, así que Row Level Security sigue aplicando.
+- **Quién dispara el barrido.** En local, un `@Scheduled` dentro de la app (perfil `demo`). En Vercel la API se apaga sin tráfico, así que lo llama GitHub Actions cada 5 minutos con un secreto propio (`X-Sweep-Token`).
+- **Reloj inyectado.** Las pruebas adelantan el tiempo en vez de esperar horas.
 
 ## Stack
 
@@ -72,7 +77,7 @@ cd frontend && npx ng test --watch=false
 
 1. **Base** ✅ Identidad, organizaciones, roles, invitaciones, Docker Compose y CI.
 2. **Núcleo de incidentes** ✅ Tickets, estados, asignación, comentarios, auditoría y Row Level Security en Postgres.
-3. **Motor de SLA:** políticas por prioridad, calendario laboral con festivos, pausas, alertas y escalamiento.
+3. **Motor de SLA** ✅ Políticas por prioridad, calendario laboral con festivos, pausas, alertas y escalamiento.
 4. **Tiempo real:** WebSockets por organización y tablero con métricas.
 5. **Notificaciones y adjuntos:** outbox transaccional, correos y archivos.
 6. **Publicación:** Vercel, demo pública, Playwright y OpenAPI.

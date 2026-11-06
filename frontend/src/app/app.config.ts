@@ -1,13 +1,19 @@
+import { registerLocaleData } from '@angular/common';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
+import localeEsCo from '@angular/common/locales/es-CO';
+import { ApplicationConfig, LOCALE_ID, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { authInterceptor, LogLevel, provideAuth } from 'angular-auth-oidc-client';
 import { environment } from '../environments/environment';
 import { routes } from './app.routes';
 
+// Fechas en español de Colombia: "vie 6 nov, 16:50".
+registerLocaleData(localeEsCo);
+
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
+    { provide: LOCALE_ID, useValue: 'es-CO' },
     provideRouter(routes, withComponentInputBinding()),
     provideHttpClient(withInterceptors([authInterceptor()])),
     provideAuth({

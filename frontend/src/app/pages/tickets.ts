@@ -8,14 +8,16 @@ import { MatInputModule } from '@angular/material/input';
 import { RouterLink } from '@angular/router';
 import { apiError } from '../core/api-error';
 import { PriorityChip, StatusChip } from '../core/chips';
-import { CATEGORY_LABELS, TicketSummary } from '../core/models';
+import { SlaApi } from '../core/sla-api';
+import { SlaBadge } from '../core/sla-badge';
+import { CATEGORY_LABELS, SlaClock, TicketSummary } from '../core/models';
 import { Session } from '../core/session';
 import { AssigneeFilter, TicketsApi, TicketView } from '../core/tickets-api';
 
 @Component({
   selector: 'app-tickets',
   imports: [FormsModule, DatePipe, RouterLink, MatButtonModule, MatButtonToggleModule, MatFormFieldModule,
-    MatInputModule, StatusChip, PriorityChip],
+    MatInputModule, StatusChip, PriorityChip, SlaBadge],
   template: `
     <header class="head">
       <h1>Tickets</h1>
@@ -60,6 +62,11 @@ import { AssigneeFilter, TicketsApi, TicketView } from '../core/tickets-api';
               </span>
               <app-priority-chip class="priority" [priority]="t.priority" />
               <app-status-chip class="status" [status]="t.status" />
+              <span class="sla">
+                @if (urgent().get(t.id); as clock) {
+                  <app-sla-badge [clock]="clock" />
+                }
+              </span>
               <time class="date" [attr.datetime]="t.updatedAt">{{ t.updatedAt | date: 'd MMM, HH:mm' }}</time>
             </a>
           </li>
@@ -74,7 +81,8 @@ import { AssigneeFilter, TicketsApi, TicketView } from '../core/tickets-api';
     .search { flex: 1; min-width: 200px; }
     .list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--mat-sys-outline-variant); }
     .row {
-      display: grid; grid-template-columns: 56px 1fr auto auto 96px; grid-template-areas: "num title prio status date" "num meta prio status date";
+      display: grid; grid-template-columns: 56px 1fr auto auto 150px 96px;
+      grid-template-areas: "num title prio status sla date" "num meta prio status sla date";
       column-gap: 16px; align-items: center; padding: 12px 8px; color: inherit; text-decoration: none;
       border-bottom: 1px solid var(--mat-sys-outline-variant);
     }
@@ -84,11 +92,12 @@ import { AssigneeFilter, TicketsApi, TicketView } from '../core/tickets-api';
     .meta { grid-area: meta; color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-body-small); }
     .priority { grid-area: prio; }
     .status { grid-area: status; }
+    .sla { grid-area: sla; text-align: right; }
     .date { grid-area: date; text-align: right; color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-body-small); }
     .muted { color: var(--mat-sys-on-surface-variant); }
     .error { color: var(--mat-sys-error); }
     @media (max-width: 640px) {
-      .row { grid-template-columns: auto 1fr auto; grid-template-areas: "num title title" "meta meta meta" "prio status date"; row-gap: 6px; }
+      .row { grid-template-columns: auto auto 1fr auto; grid-template-areas: "num title title title" "meta meta meta meta" "prio status sla date"; row-gap: 6px; }
       .status { justify-self: start; }
     }
   `,
@@ -96,11 +105,14 @@ import { AssigneeFilter, TicketsApi, TicketView } from '../core/tickets-api';
 export class Tickets {
   protected readonly session = inject(Session);
   private readonly api = inject(TicketsApi);
+  private readonly slaApi = inject(SlaApi);
   protected readonly categories = CATEGORY_LABELS;
   protected readonly view = signal<TicketView>('OPEN');
   protected readonly assignee = signal<AssigneeFilter>('ANY');
   protected readonly query = signal('');
   protected readonly tickets = signal<TicketSummary[]>([]);
+  /** El compromiso más urgente de cada ticket abierto (solo para el equipo). */
+  protected readonly urgent = signal(new Map<string, SlaClock>());
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
   private searchTimer?: ReturnType<typeof setTimeout>;
@@ -126,9 +138,14 @@ export class Tickets {
     const request = ++this.request;
     this.loading.set(true);
     try {
-      const found = await this.api.list(org, view, assignee, query);
+      const staff = this.session.can('ADMIN', 'TECHNICIAN');
+      const [found, clocks] = await Promise.all([
+        this.api.list(org, view, assignee, query),
+        staff ? this.slaApi.open(org) : Promise.resolve([]),
+      ]);
       if (request === this.request) {
         this.tickets.set(found);
+        this.urgent.set(mostUrgent(clocks));
         this.error.set(null);
       }
     } catch (error) {
@@ -137,4 +154,16 @@ export class Tickets {
       if (request === this.request) this.loading.set(false);
     }
   }
+}
+
+/** Un vencido gana; si no, el que tiene menos tiempo restante. Los pausados quedan al final. */
+function mostUrgent(clocks: SlaClock[]): Map<string, SlaClock> {
+  const rank = (c: SlaClock) =>
+    c.state === 'BREACHED' ? -Infinity : c.state === 'PAUSED' ? Infinity : (c.remainingMinutes ?? Infinity);
+  const result = new Map<string, SlaClock>();
+  for (const clock of clocks) {
+    const current = result.get(clock.ticketId);
+    if (!current || rank(clock) < rank(current)) result.set(clock.ticketId, clock);
+  }
+  return result;
 }
