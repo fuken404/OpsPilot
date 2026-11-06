@@ -39,6 +39,8 @@ class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/actuator/health", "/api/docs/**").permitAll()
                 // Lo llama un cron, no una persona: se protege con su propio secreto.
                 .requestMatchers(HttpMethod.POST, "/api/internal/sla/sweep").permitAll()
+                // El navegador no puede mandar Authorization al abrir un WebSocket: el token va en el primer mensaje.
+                .requestMatchers(HttpMethod.GET, "/ws").permitAll()
                 .anyRequest().authenticated())
             .oauth2ResourceServer(oauth -> oauth.jwt(Customizer.withDefaults()))
             .build();

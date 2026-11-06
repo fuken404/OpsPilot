@@ -163,3 +163,16 @@ export function formatMinutes(total: number, withDays = true): string {
   if (rest && !days) parts.push(`${rest} min`);
   return parts.length ? parts.join(' ') : '0 min';
 }
+
+export interface Dashboard {
+  generatedAt: string;
+  open: number;
+  unassigned: number;
+  byStatus: Record<TicketStatus, number>;
+  byPriority: Record<TicketPriority, number>;
+  sla: { running: number; atRisk: number; breached: number; paused: number };
+  compliance: { response: number | null; responseTotal: number; resolution: number | null; resolutionTotal: number };
+  workload: { userId: string; displayName: string; role: Role; open: number; breached: number }[];
+  trend: { date: string; created: number; resolved: number }[];
+  averageResolutionHours: number | null;
+}

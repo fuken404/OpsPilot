@@ -48,7 +48,7 @@ class SlaTracker {
         }
         switch (activity.action()) {
             case COMMENTED -> {
-                if (staff && !Boolean.TRUE.equals(activity.details().get("internal"))) {
+                if (staff && !activity.isInternal()) {
                     response.meet(at);
                 }
             }

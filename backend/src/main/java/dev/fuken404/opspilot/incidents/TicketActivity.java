@@ -9,7 +9,12 @@ import java.util.UUID;
  * prioridad que el ticket quedó teniendo.
  */
 public record TicketActivity(UUID organizationId, UUID ticketId, UUID actorId, Action action, Map<String, Object> details,
-                             TicketStatus status, TicketPriority priority, Instant occurredAt) {
+                             TicketStatus status, TicketPriority priority, UUID requesterId, Instant occurredAt) {
+
+    /** Una nota interna no debe llegar ni como aviso a quien reportó el ticket. */
+    public boolean isInternal() {
+        return Boolean.TRUE.equals(details.get("internal"));
+    }
 
     public enum Action {
         CREATED, STATUS_CHANGED, ASSIGNED, TRIAGED, COMMENTED

@@ -20,6 +20,9 @@ spring:
     # Flyway abre su propia conexión con el usuario dueño, sin el cambio de rol de la app.
     user: ${spring.datasource.username}
     password: ${spring.datasource.password}
+  data:
+    redis:
+      url: ${REDIS_URL:redis://localhost:6379}
   modulith:
     events:
       jdbc:
@@ -45,8 +48,15 @@ opspilot:
     sweep-token: ${SLA_SWEEP_TOKEN:}
     scheduler-enabled: false
     sweep-interval: PT1M
+  realtime:
+    # memory: una sola instancia. redis: varias instancias comparten los eventos por pub/sub.
+    broker: ${REALTIME_BROKER:memory}
 
 management:
+  health:
+    redis:
+      # El tiempo real no es crítico: si Redis cae, la API sigue sana.
+      enabled: false
   endpoints:
     web:
       exposure:

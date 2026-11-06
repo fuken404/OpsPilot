@@ -19,6 +19,7 @@ import {
   AuditEntry, CATEGORIES, CATEGORY_LABELS, Member, PRIORITIES, PRIORITY_LABELS, SLA_KIND_LABELS, SlaClock, SlaKind,
   STATUS_ACTIONS, STATUS_LABELS, TicketCategory, TicketDetail, TicketPriority, TicketStatus,
 } from '../core/models';
+import { Realtime } from '../core/realtime';
 import { Session } from '../core/session';
 import { TicketsApi } from '../core/tickets-api';
 
@@ -42,6 +43,9 @@ import { TicketsApi } from '../core/tickets-api';
         </div>
       </header>
 
+      @if (liveNote(); as note) {
+        <p class="live-note" role="status">{{ note }}</p>
+      }
       @if (message(); as text) {
         <p class="message" role="alert">
           {{ text }}
@@ -203,6 +207,7 @@ import { TicketsApi } from '../core/tickets-api';
     .history time { display: block; color: var(--mat-sys-on-surface-variant); }
     .muted { color: var(--mat-sys-on-surface-variant); }
     .small { font: var(--mat-sys-body-small); }
+    .live-note { color: var(--mat-sys-primary); font: var(--mat-sys-label-large); }
     .message { display: flex; align-items: center; gap: 8px; color: var(--mat-sys-error); }
     @media (max-width: 800px) {
       .layout { grid-template-columns: 1fr; gap: 8px; }
@@ -236,9 +241,23 @@ export class Ticket {
     this.members().filter((m) => !m.pending && m.userId && m.role !== 'CUSTOMER'));
   protected readonly reply = signal('');
   protected readonly internal = signal(false);
+  protected readonly liveNote = signal<string | null>(null);
   private loadedOrg: string | null = null;
+  private noteTimer?: ReturnType<typeof setTimeout>;
 
   constructor() {
+    // Cambios de otras personas sobre este ticket: se recarga solo y lo avisa unos segundos.
+    inject(Realtime).listen((event) => {
+      const org = this.loadedOrg;
+      if (!org || event.ticketId !== this.id() || this.busy()) return;
+      void this.load(org, event.ticketId);
+      if (event.type === 'sla') {
+        this.flash(event.level === 'BREACHED' ? 'Venció un SLA de este ticket.' : 'Un SLA de este ticket está en riesgo.');
+      } else if (event.actorId !== this.session.me()?.id) {
+        this.flash('Alguien más actualizó este ticket.');
+      }
+    });
+
     effect(() => {
       const org = this.session.organization()?.organizationId;
       const id = this.id();
@@ -274,6 +293,12 @@ export class Ticket {
     } catch {
       this.notFound.set(true);
     }
+  }
+
+  private flash(note: string): void {
+    this.liveNote.set(note);
+    clearTimeout(this.noteTimer);
+    this.noteTimer = setTimeout(() => this.liveNote.set(null), 4000);
   }
 
   protected reload(): void {

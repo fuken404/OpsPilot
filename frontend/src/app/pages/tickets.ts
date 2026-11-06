@@ -11,6 +11,7 @@ import { PriorityChip, StatusChip } from '../core/chips';
 import { SlaApi } from '../core/sla-api';
 import { SlaBadge } from '../core/sla-badge';
 import { CATEGORY_LABELS, SlaClock, TicketSummary } from '../core/models';
+import { Realtime } from '../core/realtime';
 import { Session } from '../core/session';
 import { AssigneeFilter, TicketsApi, TicketView } from '../core/tickets-api';
 
@@ -116,10 +117,18 @@ export class Tickets {
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
   private searchTimer?: ReturnType<typeof setTimeout>;
+  private liveTimer?: ReturnType<typeof setTimeout>;
+  private readonly refresh = signal(0);
   private request = 0;
 
   constructor() {
+    // Si alguien cambia un ticket, la lista se actualiza sola (agrupando ráfagas de eventos).
+    inject(Realtime).listen(() => {
+      clearTimeout(this.liveTimer);
+      this.liveTimer = setTimeout(() => this.refresh.update((n) => n + 1), 300);
+    });
     effect(() => {
+      this.refresh();
       const org = this.session.organization();
       const view = this.view();
       const assignee = this.assignee();

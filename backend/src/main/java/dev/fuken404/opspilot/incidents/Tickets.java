@@ -278,7 +278,7 @@ public class Tickets {
     private void publish(Ticket ticket, AppUser actor, Action action, Map<String, Object> details) {
         Instant at = action == Action.CREATED ? ticket.getCreatedAt() : now();
         events.publishEvent(new TicketActivity(ticket.getOrganizationId(), ticket.getId(), actor.getId(), action, details,
-            ticket.getStatus(), ticket.getPriority(), at));
+            ticket.getStatus(), ticket.getPriority(), ticket.getRequesterId(), at));
     }
 
     private Detail detail(Ticket ticket, AppUser actor, Role role) {

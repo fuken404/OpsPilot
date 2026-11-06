@@ -3,6 +3,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatSelectModule } from '@angular/material/select';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Realtime } from '../core/realtime';
 import { Session } from '../core/session';
 import { ROLE_LABELS } from '../core/models';
 
@@ -32,6 +33,12 @@ import { ROLE_LABELS } from '../core/models';
           }
         </nav>
         <span class="spacer"></span>
+        @if (session.organization()) {
+          <span class="live" [class.on]="realtime.status() === 'live'" role="status"
+                [attr.title]="realtime.status() === 'live' ? 'Los cambios llegan solos' : 'Reconectando con el servidor'">
+            <i aria-hidden="true"></i><span class="live-text">{{ realtime.status() === 'live' ? 'En vivo' : 'Reconectando…' }}</span>
+          </span>
+        }
         <span class="who">{{ me.displayName }} · {{ labels[session.role() ?? 'CUSTOMER'] }}</span>
         <button mat-button (click)="session.logout()">Salir</button>
       }
@@ -53,6 +60,9 @@ import { ROLE_LABELS } from '../core/models';
     .org { width: 200px; }
     .spacer { flex: 1; }
     .who { font: var(--mat-sys-body-medium); color: var(--mat-sys-on-surface-variant); }
+    .live { display: inline-flex; align-items: center; gap: 6px; font: var(--mat-sys-label-medium); color: var(--mat-sys-on-surface-variant); }
+    .live i { width: 8px; height: 8px; border-radius: 50%; background: var(--mat-sys-outline); }
+    .live.on i { background: #0ca30c; }
     .active { background: var(--mat-sys-secondary-container); }
     .content { max-width: 1100px; margin: 0 auto; padding: 24px; }
     .error { color: var(--mat-sys-error); }
@@ -60,12 +70,14 @@ import { ROLE_LABELS } from '../core/models';
       .bar { gap: 4px; padding: 8px 12px; }
       .org { width: 150px; }
       .who { display: none; }
+      .live-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
       .content { padding: 16px; }
     }
   `,
 })
 export class Shell implements OnInit {
   protected readonly session = inject(Session);
+  protected readonly realtime = inject(Realtime);
   protected readonly labels = ROLE_LABELS;
 
   ngOnInit(): void {
