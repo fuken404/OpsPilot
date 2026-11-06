@@ -7,13 +7,13 @@ import { PRIORITY_LABELS, STATUS_LABELS, TicketPriority, TicketStatus } from './
   template: `<span class="pill" [class]="status().toLowerCase()"><i aria-hidden="true"></i>{{ label() }}</span>`,
   styles: `
     .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 8px; border-radius: 999px;
-      font: 500 12.5px/1.4 var(--font-ui); white-space: nowrap; background: var(--bg); color: var(--fg); }
+      font: 700 12.5px/1.4 var(--font-ui); white-space: nowrap; background: var(--bg); color: var(--fg); }
     i { width: 7px; height: 7px; border-radius: 50%; background: var(--dot); }
     .new { --bg: #e3ebff; --fg: #1e3a8a; --dot: #3b6ef5; }
     .in_progress { --bg: #ece8ff; --fg: #43218c; --dot: #7148e8; }
     .waiting_customer { --bg: #fdf0c8; --fg: #713f12; --dot: #d58a06; }
     .resolved { --bg: #dcf6e3; --fg: #14532d; --dot: #1f9d4c; }
-    .closed, .cancelled { --bg: #ecebe5; --fg: #57534e; --dot: #a8a29e; }
+    .closed, .cancelled { --bg: #f4f4f5; --fg: #52525b; --dot: #a1a1aa; }
   `,
 })
 export class StatusChip {
@@ -21,44 +21,32 @@ export class StatusChip {
   protected readonly label = computed(() => STATUS_LABELS[this.status()]);
 }
 
-const LEVELS: Record<TicketPriority, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
-
-/** Prioridad como señal de cobertura: cuantas más barras llenas, más urgente. */
+/** Prioridad como píldora: el color sube con la urgencia y el texto siempre la nombra. */
 @Component({
   selector: 'app-priority-chip',
   template: `
-    <span class="priority" [class]="priority().toLowerCase()">
-      <span class="bars" aria-hidden="true">
-        @for (bar of [1, 2, 3, 4]; track bar) {
-          <i [class.on]="bar <= level()" [style.height.px]="3 + bar * 3"></i>
-        }
-      </span>
-      @if (!compact()) {
-        {{ label() }}
-      } @else {
-        <span class="sr-only">Prioridad {{ label() }}</span>
-      }
+    <span class="priority" [class]="priority().toLowerCase()" [class.compact]="compact()">
+      @if (priority() === 'CRITICAL') { <span class="icon" aria-hidden="true">priority_high</span> }
+      {{ label() }}
     </span>
   `,
   styles: `
-    .priority { display: inline-flex; align-items: center; gap: 7px; font: 500 13px/1 var(--font-ui); white-space: nowrap; color: var(--text); }
-    .bars { display: inline-flex; align-items: flex-end; gap: 2px; height: 15px; }
-    i { width: 4px; border-radius: 1.5px; background: var(--line-strong); }
-    i.on { background: var(--c); }
-    .critical { --c: #d32f2f; color: #b42318; }
-    .high { --c: #e8590c; }
-    .medium { --c: var(--ink); }
-    .low { --c: #8d8f98; }
+    .priority { display: inline-flex; align-items: center; gap: 2px; padding: 3px 10px; border-radius: 999px;
+      font: 700 12.5px/1.4 var(--font-ui); white-space: nowrap; }
+    .icon { font-size: 15px; margin-left: -4px; }
+    .critical { background: #ef4444; color: #fff; }
+    .high { background: #fbbf24; color: #3b2600; }
+    .medium { background: #ddd6fe; color: #4c1d95; }
+    .low { background: #f4f4f5; color: #52525b; }
   `,
 })
 export class PriorityChip {
   readonly priority = input.required<TicketPriority>();
   readonly compact = input(false);
-  protected readonly level = computed(() => LEVELS[this.priority()]);
   protected readonly label = computed(() => PRIORITY_LABELS[this.priority()]);
 }
 
-const AVATAR_TINTS = ['#dbeafe', '#ede9fe', '#fce7f3', '#dcfce7', '#fef3c7', '#e0f2fe', '#f3e8ff', '#ffedd5'];
+const AVATAR_TINTS = ['#ddd6fe', '#fbcfe8', '#bae6fd', '#bbf7d0', '#fde68a', '#c7d2fe', '#f5d0fe', '#fed7aa'];
 
 /** Iniciales con un fondo estable por persona (mismo nombre, mismo color). */
 @Component({
@@ -76,7 +64,7 @@ const AVATAR_TINTS = ['#dbeafe', '#ede9fe', '#fce7f3', '#dcfce7', '#fef3c7', '#e
   styles: `
     :host { display: inline-flex; }
     .avatar { display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; flex: none;
-      font-family: var(--font-ui); font-weight: 600; color: var(--ink); letter-spacing: .02em; }
+      font-family: var(--font-ui); font-weight: 800; color: var(--ink); letter-spacing: .02em; }
     .empty { border: 1.5px dashed var(--line-strong); color: var(--muted); background: transparent; }
   `,
 })

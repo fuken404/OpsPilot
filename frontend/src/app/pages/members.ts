@@ -74,7 +74,7 @@ import { Session } from '../core/session';
   styles: `
     .invite { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 170px auto; gap: 12px; align-items: center; margin-bottom: 16px; }
     .invite-text { min-width: 0; }
-    .message { display: flex; align-items: center; gap: 8px; margin: 0 0 16px; padding: 10px 14px; border-radius: 10px; background: #ecfccb; color: #1a2e05; }
+    .message { display: flex; align-items: center; gap: 8px; margin: 0 0 16px; padding: 10px 14px; border-radius: 10px; background: #ede9fe; color: #4c1d95; }
     .people { overflow: hidden; }
     .person { display: flex; align-items: center; gap: 14px; padding: 14px 20px; }
     .person + .person { border-top: 1px solid var(--line); }
@@ -82,8 +82,8 @@ import { Session } from '../core/session';
     .who strong { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .who span { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .role-select { width: 170px; }
-    .role-tag { padding: 4px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 500; background: #ecebe5; }
-    .role-tag.admin { background: var(--ink); color: var(--lime); }
+    .role-tag { padding: 4px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 700; background: #f4f4f5; }
+    .role-tag.admin { background: var(--ink); color: var(--accent-light); }
     .role-tag.technician { background: #e3ebff; color: #1e3a8a; }
     @media (max-width: 900px) {
       .invite { grid-template-columns: 1fr 1fr; }

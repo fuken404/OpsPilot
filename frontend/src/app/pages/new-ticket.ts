@@ -78,14 +78,14 @@ import { TicketsApi } from '../core/tickets-api';
     legend { padding: 0; margin-bottom: 8px; font-size: 13px; font-weight: 600; }
     .choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
     .choice { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px;
-      border: 1px solid var(--line-strong); border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 500; }
+      border: 1px solid var(--line-strong); border-radius: 16px; cursor: pointer; font-size: 14px; font-weight: 700; }
     .choice input { position: absolute; opacity: 0; pointer-events: none; }
     .choice .icon { font-size: 22px; color: var(--muted); }
-    .choice:hover { border-color: var(--ink); }
-    .choice.on { border-color: var(--ink); background: var(--ink); color: #fff; }
-    .choice.on .icon { color: var(--lime); }
-    .choice:focus-within { outline: 2px solid var(--lime-deep); outline-offset: 2px; }
-    .note { display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 12px; border-radius: 10px; background: #f1f0ea; font-size: 13.5px; color: var(--muted); }
+    .choice:hover { border-color: var(--accent-light); }
+    .choice.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); }
+    .choice.on .icon { color: var(--accent); }
+    .choice:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .note { display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--tint-sky); font-size: 13.5px; color: #075985; }
     .foot { display: flex; justify-content: flex-end; gap: 8px; padding-top: 4px; }
   `,
 })

@@ -95,23 +95,23 @@ import { AssigneeFilter, TicketsApi, TicketView } from '../core/tickets-api';
   styles: `
     .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; }
     .search { flex: 1; min-width: 220px; display: flex; align-items: center; gap: 8px; padding: 0 12px; height: 40px;
-      background: var(--card); border: 1px solid var(--line-strong); border-radius: 10px; }
-    .search:focus-within { border-color: var(--lime-deep); box-shadow: 0 0 0 3px #ecfccb; }
+      background: var(--card); border: 1px solid var(--line-strong); border-radius: 999px; }
+    .search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px #ede9fe; }
     .search .icon { color: var(--muted); }
     .search input { flex: 1; border: 0; outline: none; background: transparent; font: 400 14px var(--font-ui); color: var(--text); }
 
     .list { overflow: hidden; }
     .list-head, .row { display: grid; grid-template-columns: minmax(0, 1fr) 92px 128px 150px 140px 70px; gap: 16px; align-items: center; }
-    .list-head { padding: 10px 20px; border-bottom: 1px solid var(--line); background: #faf9f6;
-      font: 500 11px/1 var(--font-mono); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+    .list-head { padding: 10px 20px; border-bottom: 1px solid var(--line); background: #fbfaff;
+      font: 800 11.5px/1 var(--font-ui); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
     ul { list-style: none; margin: 0; padding: 0; }
-    li + li { border-top: 1px solid var(--line); }
+    li + li { border-top: 1px dashed var(--line-strong); }
     .row { padding: 14px 20px; color: inherit; text-decoration: none; transition: background .12s ease; }
-    .row:hover { background: #faf9f6; }
-    .row:focus-visible { outline: 2px solid var(--lime-deep); outline-offset: -2px; }
+    .row:hover { background: #fbfaff; }
+    .row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
     .main { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; row-gap: 2px; min-width: 0; }
-    .key { grid-row: span 2; align-self: start; padding: 3px 7px; border-radius: 6px; background: #efeee8; font-size: 11.5px; color: var(--muted); }
-    .title { font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .key { grid-row: span 2; align-self: start; padding: 3px 8px; border-radius: 999px; background: var(--accent-soft); font-size: 11.5px; font-weight: 600; color: var(--accent-ink); }
+    .title { font-weight: 800; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .meta { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .c-who { display: flex; align-items: center; gap: 8px; min-width: 0; }
     .who-name { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

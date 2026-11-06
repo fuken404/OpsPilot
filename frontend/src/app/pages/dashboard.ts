@@ -24,19 +24,19 @@ import { Session } from '../core/session';
           <span class="value">{{ d.open }}</span>
           <span class="hint">{{ d.unassigned }} sin responsable</span>
         </a>
-        <div class="tile">
+        <div class="tile t-violet">
           <span class="label"><span class="icon" aria-hidden="true">person_off</span>Sin responsable</span>
           <span class="value">{{ d.unassigned }}</span>
         </div>
-        <div class="tile" [class.flag-warn]="d.sla.atRisk > 0">
+        <div class="tile t-amber" [class.flag-warn]="d.sla.atRisk > 0">
           <span class="label"><span class="icon warn" aria-hidden="true">warning</span>SLA en riesgo</span>
           <span class="value">{{ d.sla.atRisk }}</span>
         </div>
-        <div class="tile" [class.flag-bad]="d.sla.breached > 0">
+        <div class="tile t-pink" [class.flag-bad]="d.sla.breached > 0">
           <span class="label"><span class="icon bad" aria-hidden="true">error</span>SLA vencido</span>
           <span class="value">{{ d.sla.breached }}</span>
         </div>
-        <div class="tile">
+        <div class="tile t-sky">
           <span class="label"><span class="icon" aria-hidden="true">schedule</span>Resolución promedio</span>
           <span class="value">
             @if (d.averageResolutionHours !== null) {
@@ -91,19 +91,23 @@ import { Session } from '../core/session';
     .kpis { display: grid; grid-template-columns: 1.3fr repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
     .tile { display: flex; flex-direction: column; gap: 8px; padding: 16px 18px; border-radius: var(--radius); color: inherit;
       text-decoration: none; background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow); }
-    .tile .label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: var(--muted); }
+    .tile .label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #52525b; }
+    .t-violet { background: var(--tint-violet); border-color: transparent; box-shadow: none; }
+    .t-amber { background: var(--tint-amber); border-color: transparent; box-shadow: none; }
+    .t-pink { background: var(--tint-pink); border-color: transparent; box-shadow: none; }
+    .t-sky { background: var(--tint-sky); border-color: transparent; box-shadow: none; }
     .tile .label .icon { font-size: 17px; }
-    .tile .value { font: 650 34px/1 var(--font-display); letter-spacing: -0.03em; color: var(--ink); }
+    .tile .value { font: 900 34px/1 var(--font-display); letter-spacing: -0.02em; color: var(--ink); }
     .tile .value small { font-size: 18px; margin-left: 2px; color: var(--muted); }
     .tile .hint { font-size: 12.5px; color: var(--muted); }
     .tile.hero { background: var(--ink); border-color: var(--ink); color: var(--ink-text); }
     .tile.hero .label, .tile.hero .hint { color: var(--ink-muted); }
-    .tile.hero .value { font-size: 52px; color: var(--lime); }
+    .tile.hero .value { font-size: 52px; color: var(--accent-light); }
     .tile.hero:hover { background: var(--ink-2); }
     .icon.warn { color: #d58a06; }
     .icon.bad { color: var(--danger); }
-    .flag-warn { border-color: #f5dfa0; background: #fffaeb; }
-    .flag-bad { border-color: #f3b4b4; background: #fdf1f1; }
+    .flag-warn { box-shadow: inset 0 0 0 2px #f59e0b; }
+    .flag-bad { box-shadow: inset 0 0 0 2px #ef4444; }
     .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
     .wide { grid-column: 1 / -1; }
     .card-sub { margin-bottom: 16px; }
@@ -111,7 +115,7 @@ import { Session } from '../core/session';
     .meters { display: flex; flex-direction: column; gap: 18px; }
     @media (max-width: 1100px) { .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } .hero { grid-column: span 3; } }
     @media (max-width: 720px) {
-      .grid { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: minmax(0, 1fr); }
       .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .hero { grid-column: 1 / -1; }
     }

@@ -67,7 +67,7 @@ interface Row {
   styles: `
     .note { display: flex; align-items: center; gap: 8px; margin: 0 0 16px; font-size: 13.5px; color: var(--muted); }
     .note .icon { font-size: 18px; }
-    .message { color: var(--lime-deep); font-weight: 500; }
+    .message { color: var(--accent); font-weight: 500; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
     .policy { display: flex; flex-direction: column; gap: 12px; }
     .policy p { margin: 0; }

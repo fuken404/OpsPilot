@@ -42,12 +42,13 @@ import { Dashboard } from './dashboard';
     }
   `,
   styles: `
-    .eyebrow { text-transform: none; letter-spacing: .02em; }
+    .eyebrow { text-transform: none; letter-spacing: .01em; }
+    .welcome { background: linear-gradient(120deg, var(--tint-violet), var(--tint-pink)); border: 0; }
     .welcome { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 28px; }
-    .welcome h2 { margin: 0 0 6px; font-size: 22px; font-weight: 650; }
+    .welcome h2 { margin: 0 0 6px; font-size: 22px; font-weight: 800; }
     .welcome p { margin: 0 0 18px; max-width: 56ch; line-height: 1.6; }
     .actions { display: flex; gap: 10px; flex-wrap: wrap; }
-    .art { font-size: 96px; color: #d9f99d; flex: none; }
+    .art { font-size: 96px; color: #ddd6fe; flex: none; }
     h1.empty { font-size: 28px; }
     @media (max-width: 640px) { .art { display: none; } }
   `,

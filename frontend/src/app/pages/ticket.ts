@@ -238,24 +238,24 @@ import { TicketsApi } from '../core/tickets-api';
 
     .head { margin-bottom: 20px; }
     .tags { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
-    .tag-soft { padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line-strong); font-size: 12.5px; color: var(--muted); }
-    h1 { margin: 12px 0 10px; font-size: clamp(24px, 3vw, 32px); line-height: 1.15; font-weight: 650; }
+    .tag-soft { padding: 3px 10px; border-radius: 999px; background: #f4f4f5; font-size: 12.5px; font-weight: 700; color: #52525b; }
+    h1 { margin: 12px 0 10px; font-size: clamp(24px, 3vw, 32px); line-height: 1.15; font-weight: 800; }
     .by { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 14px; color: var(--muted); }
     .by strong { color: var(--text); font-weight: 600; }
 
     .banner { display: flex; align-items: center; gap: 8px; margin: 0 0 16px; padding: 10px 14px; border-radius: 10px; font-size: 14px; }
-    .banner.live { background: #ecfccb; color: #1a2e05; }
+    .banner.live { background: #ede9fe; color: #4c1d95; }
     .banner.warn { background: #fdecec; color: #8a1c1c; }
 
     .layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 28px; align-items: start; }
     aside { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 24px; }
     .description { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 15.5px; line-height: 1.65; }
-    .section { display: flex; align-items: center; gap: 8px; margin: 28px 0 14px; font-size: 18px; font-weight: 650; }
-    .count { font-size: 12px; padding: 2px 7px; border-radius: 6px; background: #e9e7df; color: var(--muted); font-weight: 500; }
+    .section { display: flex; align-items: center; gap: 8px; margin: 28px 0 14px; font-size: 18px; font-weight: 800; }
+    .count { font-size: 12px; padding: 2px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); font-weight: 700; }
 
     .thread { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
     .thread li { display: flex; gap: 12px; align-items: flex-start; }
-    .bubble { flex: 1; min-width: 0; padding: 12px 16px; border-radius: 4px 14px 14px 14px; background: var(--card); border: 1px solid var(--line); }
+    .bubble { flex: 1; min-width: 0; padding: 12px 16px; border-radius: 6px 18px 18px 18px; background: var(--card); border: 1px solid var(--line); }
     .internal .bubble { background: #fffaeb; border-color: #f5dfa0; }
     .author { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 0 4px; font-size: 13.5px; }
     .author time { margin-left: auto; font-size: 12px; color: var(--muted); }
@@ -267,11 +267,11 @@ import { TicketsApi } from '../core/tickets-api';
 
     .composer { margin-top: 16px; overflow: hidden; }
     .composer.internal { border-color: #f5dfa0; }
-    .tabs { display: flex; border-bottom: 1px solid var(--line); background: #faf9f6; }
+    .tabs { display: flex; border-bottom: 1px solid var(--line); background: #fbfaff; }
     .tabs button { display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; cursor: pointer;
       padding: 11px 16px; font: 500 13.5px var(--font-ui); color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
     .tabs button .icon { font-size: 17px; }
-    .tabs button[aria-selected='true'] { color: var(--ink); border-bottom-color: var(--ink); }
+    .tabs button[aria-selected='true'] { color: var(--accent-ink); border-bottom-color: var(--accent); font-weight: 700; }
     .composer.internal .tabs button[aria-selected='true'] { border-bottom-color: #d58a06; }
     textarea { display: block; width: 100%; box-sizing: border-box; border: 0; resize: vertical; min-height: 92px; padding: 14px 16px;
       font: 400 15px/1.55 var(--font-ui); color: var(--text); background: transparent; outline: none; }
@@ -281,7 +281,7 @@ import { TicketsApi } from '../core/tickets-api';
     .files { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
     .file { width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px; text-align: left; cursor: pointer; font: inherit; color: inherit; }
     .file:hover { border-color: var(--line-strong); }
-    .file-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 9px; background: #efeee8; color: var(--ink); flex: none; }
+    .file-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; background: var(--accent-soft); color: var(--accent-ink); flex: none; }
     .file-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
     .file-text strong { font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .file-text small { font-size: 12px; color: var(--muted); }
@@ -291,8 +291,8 @@ import { TicketsApi } from '../core/tickets-api';
     .card-title + * { margin-top: 12px; }
     .clock + .clock { margin-top: 16px; }
     .clock-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 500; }
-    .meter { height: 6px; border-radius: 3px; background: #ecebe5; margin: 8px 0 6px; overflow: hidden; }
-    .meter i { display: block; height: 100%; border-radius: 3px; background: var(--ink); }
+    .meter { height: 8px; border-radius: 4px; background: #f1effa; margin: 8px 0 6px; overflow: hidden; }
+    .meter i { display: block; height: 100%; border-radius: 4px; background: var(--accent); }
     .at_risk .meter i { background: #d58a06; }
     .breached .meter i { background: var(--danger); }
     .met .meter i { background: #1f9d4c; }

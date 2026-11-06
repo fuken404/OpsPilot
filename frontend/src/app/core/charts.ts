@@ -37,8 +37,8 @@ export interface BarItem {
     li { display: grid; grid-template-columns: minmax(90px, 34%) 1fr; column-gap: 12px; align-items: center; }
     .name { font: var(--mat-sys-body-medium); color: var(--mat-sys-on-surface); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .track { display: flex; align-items: center; gap: 8px; min-width: 0; }
-    .bar { height: 12px; border-radius: 0 4px 4px 0; background: #2a78d6; min-width: 2px; max-width: calc(100% - 40px); }
-    .bar.zero { background: #e1e0d9; }
+    .bar { height: 12px; border-radius: 0 4px 4px 0; background: var(--accent); min-width: 2px; max-width: calc(100% - 40px); }
+    .bar.zero { background: var(--line-strong); }
     .value { font: var(--mat-sys-label-large); font-variant-numeric: tabular-nums; color: var(--mat-sys-on-surface); }
     .note { grid-column: 2; font: var(--mat-sys-body-small); color: var(--mat-sys-on-surface-variant); }
   `,
@@ -79,8 +79,8 @@ export class BarList {
     .label { font: var(--mat-sys-body-medium); }
     strong { font: var(--mat-sys-title-large); }
     .empty { color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-body-small); }
-    .track { height: 8px; border-radius: 4px; background: #cde2fb; margin: 6px 0 4px; overflow: hidden; }
-    .fill { height: 100%; border-radius: 4px; background: #2a78d6; }
+    .track { height: 8px; border-radius: 4px; background: var(--accent-soft); margin: 6px 0 4px; overflow: hidden; }
+    .fill { height: 100%; border-radius: 4px; background: var(--accent); }
     .fill.warning { background: #fab219; }
     .fill.critical { background: #d03b3b; }
     .note { margin: 0; font: var(--mat-sys-body-small); color: var(--mat-sys-on-surface-variant); }
@@ -173,7 +173,7 @@ const SERIES = [
     .legend span { display: inline-flex; align-items: center; gap: 6px; }
     .legend i { width: 14px; height: 2px; border-radius: 1px; }
     .plot { position: relative; }
-    svg { display: block; overflow: visible; outline: none; touch-action: pan-y; }
+    svg { display: block; max-width: 100%; overflow: visible; outline: none; touch-action: pan-y; }
     svg:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: 4px; border-radius: 4px; }
     .grid { stroke: #e1e0d9; stroke-width: 1; }
     .baseline { stroke: #c3c2b7; stroke-width: 1; }
