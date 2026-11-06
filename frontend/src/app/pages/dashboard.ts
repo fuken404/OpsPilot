@@ -20,26 +20,27 @@ import { Session } from '../core/session';
     } @else if (data(); as d) {
       <section class="kpis" aria-label="Resumen">
         <a class="tile hero" routerLink="/app/tickets">
-          <span class="label">Tickets abiertos</span>
+          <span class="label"><span class="icon" aria-hidden="true">confirmation_number</span>Tickets abiertos</span>
           <span class="value">{{ d.open }}</span>
-        </a>
-        <a class="tile" routerLink="/app/tickets">
-          <span class="label">Sin responsable</span>
-          <span class="value">{{ d.unassigned }}</span>
+          <span class="hint">{{ d.unassigned }} sin responsable</span>
         </a>
         <div class="tile">
-          <span class="label"><i class="status warning" aria-hidden="true">▲</i>SLA en riesgo</span>
+          <span class="label"><span class="icon" aria-hidden="true">person_off</span>Sin responsable</span>
+          <span class="value">{{ d.unassigned }}</span>
+        </div>
+        <div class="tile" [class.flag-warn]="d.sla.atRisk > 0">
+          <span class="label"><span class="icon warn" aria-hidden="true">warning</span>SLA en riesgo</span>
           <span class="value">{{ d.sla.atRisk }}</span>
         </div>
-        <div class="tile">
-          <span class="label"><i class="status critical" aria-hidden="true">●</i>SLA vencido</span>
+        <div class="tile" [class.flag-bad]="d.sla.breached > 0">
+          <span class="label"><span class="icon bad" aria-hidden="true">error</span>SLA vencido</span>
           <span class="value">{{ d.sla.breached }}</span>
         </div>
         <div class="tile">
-          <span class="label">Resolución promedio</span>
+          <span class="label"><span class="icon" aria-hidden="true">schedule</span>Resolución promedio</span>
           <span class="value">
             @if (d.averageResolutionHours !== null) {
-              {{ d.averageResolutionHours | number: '1.0-1' }} h
+              {{ d.averageResolutionHours | number: '1.0-1' }}<small>h</small>
             } @else {
               —
             }
@@ -49,15 +50,15 @@ import { Session } from '../core/session';
       </section>
 
       <div class="grid">
-        <section class="card wide">
-          <h2>Creados y resueltos</h2>
-          <p class="sub">Últimos 14 días</p>
+        <section class="card card-pad wide">
+          <h2 class="card-title">Creados y resueltos</h2>
+          <p class="card-sub">Últimos 14 días</p>
           <app-trend-chart [points]="d.trend" />
         </section>
 
-        <section class="card">
-          <h2>Cumplimiento de SLA</h2>
-          <p class="sub">Compromisos terminados en los últimos 30 días</p>
+        <section class="card card-pad">
+          <h2 class="card-title">Cumplimiento de SLA</h2>
+          <p class="card-sub">Compromisos terminados en los últimos 30 días</p>
           <div class="meters">
             <app-meter label="Primera respuesta a tiempo" [value]="d.compliance.response"
                        [note]="d.compliance.responseTotal + ' tickets'" />
@@ -66,19 +67,19 @@ import { Session } from '../core/session';
           </div>
         </section>
 
-        <section class="card">
-          <h2>Carga por persona</h2>
-          <p class="sub">Tickets abiertos asignados</p>
+        <section class="card card-pad">
+          <h2 class="card-title">Carga por persona</h2>
+          <p class="card-sub">Tickets abiertos asignados</p>
           <app-bar-list label="Carga por persona" [items]="workload()" />
         </section>
 
-        <section class="card">
-          <h2>Abiertos por estado</h2>
+        <section class="card card-pad">
+          <h2 class="card-title">Abiertos por estado</h2>
           <app-bar-list label="Abiertos por estado" [items]="byStatus()" />
         </section>
 
-        <section class="card">
-          <h2>Abiertos por prioridad</h2>
+        <section class="card card-pad">
+          <h2 class="card-title">Abiertos por prioridad</h2>
           <app-bar-list label="Abiertos por prioridad" [items]="byPriority()" />
         </section>
       </div>
@@ -87,29 +88,32 @@ import { Session } from '../core/session';
     }
   `,
   styles: `
-    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
-    .tile { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 12px; color: inherit;
-      text-decoration: none; border: 1px solid var(--mat-sys-outline-variant); background: var(--mat-sys-surface); }
-    a.tile:hover { background: var(--mat-sys-surface-container-low); }
-    .tile .label { display: inline-flex; align-items: center; gap: 6px; font: var(--mat-sys-body-medium); color: var(--mat-sys-on-surface-variant); }
-    .tile .value { font: 600 32px/1.1 Roboto, sans-serif; color: var(--mat-sys-on-surface); }
-    .tile.hero .value { font-size: 48px; }
-    .tile .hint { font: var(--mat-sys-body-small); color: var(--mat-sys-on-surface-variant); }
-    .status { font-style: normal; font-size: 11px; }
-    .status.warning { color: #fab219; }
-    .status.critical { color: #d03b3b; }
+    .kpis { display: grid; grid-template-columns: 1.3fr repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .tile { display: flex; flex-direction: column; gap: 8px; padding: 16px 18px; border-radius: var(--radius); color: inherit;
+      text-decoration: none; background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow); }
+    .tile .label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: var(--muted); }
+    .tile .label .icon { font-size: 17px; }
+    .tile .value { font: 650 34px/1 var(--font-display); letter-spacing: -0.03em; color: var(--ink); }
+    .tile .value small { font-size: 18px; margin-left: 2px; color: var(--muted); }
+    .tile .hint { font-size: 12.5px; color: var(--muted); }
+    .tile.hero { background: var(--ink); border-color: var(--ink); color: var(--ink-text); }
+    .tile.hero .label, .tile.hero .hint { color: var(--ink-muted); }
+    .tile.hero .value { font-size: 52px; color: var(--lime); }
+    .tile.hero:hover { background: var(--ink-2); }
+    .icon.warn { color: #d58a06; }
+    .icon.bad { color: var(--danger); }
+    .flag-warn { border-color: #f5dfa0; background: #fffaeb; }
+    .flag-bad { border-color: #f3b4b4; background: #fdf1f1; }
     .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-    .card { padding: 16px 20px; border-radius: 12px; border: 1px solid var(--mat-sys-outline-variant); min-width: 0; }
-    .card.wide { grid-column: 1 / -1; }
-    h2 { font: var(--mat-sys-title-medium); margin: 0; }
-    h2 + app-bar-list { display: block; margin-top: 14px; }
-    .sub { margin: 2px 0 14px; font: var(--mat-sys-body-small); color: var(--mat-sys-on-surface-variant); }
-    .meters { display: flex; flex-direction: column; gap: 16px; }
-    .muted { color: var(--mat-sys-on-surface-variant); }
-    .error { color: var(--mat-sys-error); }
+    .wide { grid-column: 1 / -1; }
+    .card-sub { margin-bottom: 16px; }
+    h2 + app-bar-list { display: block; margin-top: 16px; }
+    .meters { display: flex; flex-direction: column; gap: 18px; }
+    @media (max-width: 1100px) { .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } .hero { grid-column: span 3; } }
     @media (max-width: 720px) {
       .grid { grid-template-columns: 1fr; }
-      .tile.hero { grid-column: 1 / -1; }
+      .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .hero { grid-column: 1 / -1; }
     }
   `,
 })

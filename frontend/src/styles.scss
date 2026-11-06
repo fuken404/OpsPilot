@@ -1,39 +1,141 @@
-// Include theming for Angular Material with `mat.theme()`.
-// This Sass mixin will define CSS variables that are used for styling Angular Material
-// components according to the Material 3 design spec.
-// Learn more about theming and how to use it for your application's
-// custom components at https://material.angular.dev/guide/theming
 @use '@angular/material' as mat;
+
+/*
+ * Identidad de OpsPilot: consola de operaciones. Tinta casi negra y un verde lima de señal sobre
+ * papel cálido. Tres tipografías con un papel cada una: Bricolage Grotesque para títulos,
+ * Instrument Sans para la interfaz y JetBrains Mono para claves, cifras y cuentas regresivas.
+ */
 
 html {
   height: 100%;
   @include mat.theme(
     (
       color: (
-        primary: mat.$azure-palette,
-        tertiary: mat.$blue-palette,
+        primary: mat.$green-palette,
+        tertiary: mat.$orange-palette,
       ),
-      typography: Roboto,
-      density: 0,
+      typography: (
+        plain-family: 'Instrument Sans',
+        brand-family: 'Bricolage Grotesque',
+        bold-weight: 600,
+        medium-weight: 500,
+      ),
+      density: -1,
+    )
+  );
+
+  // Tokens de la marca
+  --ink: #111318;
+  --ink-2: #1b1e25;
+  --ink-3: #2a2e37;
+  --ink-text: #e9e8e3;
+  --ink-muted: #8d8f98;
+  --lime: #c8f169;
+  --lime-deep: #3f6212;
+  --paper: #f4f3ee;
+  --card: #ffffff;
+  --line: #e4e2da;
+  --line-strong: #d3d0c5;
+  --text: #111318;
+  --muted: #6b6a63;
+  --danger: #c52a2a;
+  --radius: 14px;
+  --shadow: 0 1px 2px rgb(17 19 24 / 4%), 0 8px 24px -12px rgb(17 19 24 / 12%);
+  --font-display: 'Bricolage Grotesque', 'Instrument Sans', system-ui, sans-serif;
+  --font-ui: 'Instrument Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  // Material sobre la marca
+  --mat-sys-primary: var(--lime-deep);
+  --mat-sys-on-primary: #ffffff;
+  --mat-sys-primary-container: #ecfccb;
+  --mat-sys-on-primary-container: #1a2e05;
+  --mat-sys-secondary-container: #e9e7df;
+  --mat-sys-on-secondary-container: var(--ink);
+  --mat-sys-surface: var(--paper);
+  --mat-sys-surface-container-lowest: #ffffff;
+  --mat-sys-surface-container-low: #faf9f6;
+  --mat-sys-surface-container: #ffffff;
+  --mat-sys-surface-container-high: #f1f0ea;
+  --mat-sys-surface-container-highest: #ebeae3;
+  --mat-sys-on-surface: var(--text);
+  --mat-sys-on-surface-variant: var(--muted);
+  --mat-sys-outline: #a8a69c;
+  --mat-sys-outline-variant: var(--line);
+  --mat-sys-error: var(--danger);
+
+  @include mat.button-overrides(
+    (
+      filled-container-color: var(--ink),
+      filled-label-text-color: #ffffff,
+      filled-container-shape: 10px,
+      outlined-container-shape: 10px,
+      outlined-outline-color: var(--line-strong),
+      outlined-label-text-color: var(--ink),
+      text-container-shape: 10px,
+      text-label-text-color: var(--ink),
+    )
+  );
+  @include mat.form-field-overrides(
+    (
+      outlined-container-shape: 10px,
+      outlined-outline-color: var(--line-strong),
     )
   );
 }
 
 body {
-  // Default the application to a light color theme. This can be changed to
-  // `dark` to enable the dark color theme, or to `light dark` to defer to the
-  // user's system settings.
   color-scheme: light;
-
-  // Set a default background, font and text colors for the application using
-  // Angular Material's system-level CSS variables. Learn more about these
-  // variables at https://material.angular.dev/guide/system-variables
-  background-color: var(--mat-sys-surface);
-  color: var(--mat-sys-on-surface);
-  font: var(--mat-sys-body-medium);
-
-  // Reset the user agent margin.
   margin: 0;
   height: 100%;
+  background: var(--paper);
+  color: var(--text);
+  font: 400 15px/1.5 var(--font-ui);
+  -webkit-font-smoothing: antialiased;
 }
-/* You can add global styles to this file, and also import other style files */
+
+h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; }
+
+.mat-icon, .icon {
+  font-family: 'Material Symbols Rounded';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'liga';
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'opsz' 20;
+}
+
+// Piezas comunes de las páginas
+.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+.page-head h1 { margin: 2px 0 0; font-size: clamp(26px, 3vw, 34px); line-height: 1.1; font-weight: 650; }
+.eyebrow { margin: 0; font: 500 12px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.lede { margin: 6px 0 0; color: var(--muted); max-width: 64ch; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.card-pad { padding: 18px 20px; }
+.card-title { margin: 0; font: 600 16px/1.3 var(--font-display); letter-spacing: -0.01em; }
+.card-sub { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.error-text { color: var(--danger); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.btn-icon, .btn-icon .mdc-button__label { display: inline-flex; align-items: center; gap: 6px; }
+.btn-icon .icon { font-size: 18px; }
+
+// Control segmentado propio (filtros)
+.segmented { display: inline-flex; padding: 3px; gap: 2px; border-radius: 10px; background: #e9e7df; }
+.segmented button {
+  border: 0; background: transparent; color: var(--muted); font: 500 13px/1 var(--font-ui);
+  padding: 8px 12px; border-radius: 8px; cursor: pointer;
+}
+.segmented button:hover { color: var(--ink); }
+.segmented button[aria-pressed='true'] { background: var(--card); color: var(--ink); box-shadow: 0 1px 2px rgb(17 19 24 / 10%); }
+.segmented button:focus-visible { outline: 2px solid var(--lime-deep); outline-offset: 1px; }
+
+:focus-visible { outline-color: var(--lime-deep); }
+::selection { background: #d9f99d; }

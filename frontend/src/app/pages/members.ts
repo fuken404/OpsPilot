@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { MatTableModule } from '@angular/material/table';
+import { Avatar } from '../core/chips';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Member, Role, ROLE_LABELS } from '../core/models';
@@ -13,17 +13,27 @@ import { Session } from '../core/session';
 
 @Component({
   selector: 'app-members',
-  imports: [FormsModule, MatTableModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule],
+  imports: [FormsModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule, Avatar],
   template: `
-    <h1>Equipo</h1>
+    <header class="page-head">
+      <div>
+        <p class="eyebrow">{{ session.organization()?.name }}</p>
+        <h1>Equipo</h1>
+        <p class="lede">Quién trabaja en esta organización y con qué rol. El rol vale solo aquí: alguien puede ser técnico en una empresa y cliente en otra.</p>
+      </div>
+    </header>
 
     @if (session.can('ADMIN')) {
-      <form class="invite" (ngSubmit)="add()">
-        <mat-form-field>
+      <form class="invite card card-pad" (ngSubmit)="add()">
+        <div class="invite-text">
+          <h2 class="card-title">Invitar a alguien</h2>
+          <p class="card-sub">Si ya entró antes, queda agregado; si no, la invitación se activa en su primer ingreso con correo verificado.</p>
+        </div>
+        <mat-form-field class="email">
           <mat-label>Correo</mat-label>
           <input matInput type="email" name="email" [(ngModel)]="email" required />
         </mat-form-field>
-        <mat-form-field>
+        <mat-form-field class="role">
           <mat-label>Rol</mat-label>
           <mat-select name="role" [(ngModel)]="role">
             @for (r of roles; track r) {
@@ -31,46 +41,55 @@ import { Session } from '../core/session';
             }
           </mat-select>
         </mat-form-field>
-        <button mat-flat-button type="submit">Agregar</button>
+        <button mat-flat-button type="submit" class="btn-icon"><span class="icon">person_add</span>Invitar</button>
       </form>
     }
     @if (message(); as text) {
-      <p class="message" role="status">{{ text }}</p>
+      <p class="message" role="status"><span class="icon" aria-hidden="true">info</span>{{ text }}</p>
     }
 
-    <table mat-table [dataSource]="members()">
-      <ng-container matColumnDef="name">
-        <th mat-header-cell *matHeaderCellDef>Persona</th>
-        <td mat-cell *matCellDef="let m">{{ m.displayName }}<br /><small>{{ m.email }}</small></td>
-      </ng-container>
-      <ng-container matColumnDef="role">
-        <th mat-header-cell *matHeaderCellDef>Rol</th>
-        <td mat-cell *matCellDef="let m">
+    <section class="card people">
+      @for (m of members(); track m.email) {
+        <div class="person">
+          <app-avatar [name]="m.pending ? null : m.displayName" [size]="38" />
+          <div class="who">
+            <strong>{{ m.pending ? m.email : m.displayName }}</strong>
+            <span>{{ m.pending ? 'Invitación pendiente' : m.email }}</span>
+          </div>
           @if (session.can('ADMIN') && !m.pending) {
-            <mat-select [value]="m.role" (valueChange)="changeRole(m, $event)" [aria-label]="'Rol de ' + m.email">
-              @for (r of roles; track r) {
-                <mat-option [value]="r">{{ labels[r] }}</mat-option>
-              }
-            </mat-select>
+            <mat-form-field class="role-select">
+              <mat-select [value]="m.role" (valueChange)="changeRole(m, $event)" [aria-label]="'Rol de ' + m.email">
+                @for (r of roles; track r) {
+                  <mat-option [value]="r">{{ labels[r] }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
           } @else {
-            {{ roleLabel(m.role) }}
+            <span class="role-tag" [class]="m.role.toLowerCase()">{{ roleLabel(m.role) }}</span>
           }
-        </td>
-      </ng-container>
-      <ng-container matColumnDef="status">
-        <th mat-header-cell *matHeaderCellDef>Estado</th>
-        <td mat-cell *matCellDef="let m">{{ m.pending ? 'Invitación pendiente' : 'Activo' }}</td>
-      </ng-container>
-      <tr mat-header-row *matHeaderRowDef="columns"></tr>
-      <tr mat-row *matRowDef="let row; columns: columns"></tr>
-    </table>
+        </div>
+      }
+    </section>
   `,
   styles: `
-    h1 { font: var(--mat-sys-headline-medium); }
-    .invite { display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline; }
-    .message { color: var(--mat-sys-primary); }
-    table { width: 100%; }
-    small { color: var(--mat-sys-on-surface-variant); }
+    .invite { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 170px auto; gap: 12px; align-items: center; margin-bottom: 16px; }
+    .invite-text { min-width: 0; }
+    .message { display: flex; align-items: center; gap: 8px; margin: 0 0 16px; padding: 10px 14px; border-radius: 10px; background: #ecfccb; color: #1a2e05; }
+    .people { overflow: hidden; }
+    .person { display: flex; align-items: center; gap: 14px; padding: 14px 20px; }
+    .person + .person { border-top: 1px solid var(--line); }
+    .who { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+    .who strong { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .who span { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .role-select { width: 170px; }
+    .role-tag { padding: 4px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 500; background: #ecebe5; }
+    .role-tag.admin { background: var(--ink); color: var(--lime); }
+    .role-tag.technician { background: #e3ebff; color: #1e3a8a; }
+    @media (max-width: 900px) {
+      .invite { grid-template-columns: 1fr 1fr; }
+      .invite-text { grid-column: 1 / -1; }
+      .role-select { width: 130px; }
+    }
   `,
 })
 export class Members {
@@ -78,7 +97,6 @@ export class Members {
   private readonly http = inject(HttpClient);
   protected readonly labels = ROLE_LABELS;
   protected readonly roles: Role[] = ['ADMIN', 'TECHNICIAN', 'CUSTOMER'];
-  protected readonly columns = ['name', 'role', 'status'];
   protected readonly members = signal<Member[]>([]);
   protected readonly message = signal<string | null>(null);
   protected email = '';

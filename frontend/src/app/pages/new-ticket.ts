@@ -3,7 +3,6 @@ import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { Router, RouterLink } from '@angular/router';
 import { apiError } from '../core/api-error';
 import { CATEGORIES, CATEGORY_LABELS, PRIORITIES, PRIORITY_LABELS, TicketCategory, TicketPriority } from '../core/models';
@@ -12,11 +11,18 @@ import { TicketsApi } from '../core/tickets-api';
 
 @Component({
   selector: 'app-new-ticket',
-  imports: [FormsModule, RouterLink, MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule],
+  imports: [FormsModule, RouterLink, MatButtonModule, MatFormFieldModule, MatInputModule],
   template: `
-    <a mat-button routerLink="..">← Tickets</a>
-    <h1>Nuevo ticket</h1>
-    <form #form="ngForm" (ngSubmit)="form.valid && submit()">
+    <nav class="crumbs"><a routerLink=".."><span class="icon" aria-hidden="true">arrow_back</span>Tickets</a></nav>
+    <header class="page-head">
+      <div>
+        <p class="eyebrow">{{ session.organization()?.name }}</p>
+        <h1>Reportar un problema</h1>
+        <p class="lede">Mientras más claro, más rápido. Cuenta desde cuándo pasa, a quién afecta y qué mensaje aparece.</p>
+      </div>
+    </header>
+
+    <form class="card card-pad" #form="ngForm" (ngSubmit)="form.valid && submit()">
       <mat-form-field>
         <mat-label>Título</mat-label>
         <input matInput name="title" [(ngModel)]="title" required minlength="3" maxlength="200"
@@ -27,42 +33,60 @@ import { TicketsApi } from '../core/tickets-api';
         <textarea matInput name="description" [(ngModel)]="description" required maxlength="10000" rows="6"
                   placeholder="Desde cuándo, a quién afecta y qué mensaje aparece."></textarea>
       </mat-form-field>
-      <div class="pair">
-        <mat-form-field>
-          <mat-label>Categoría</mat-label>
-          <mat-select name="category" [(ngModel)]="category" required>
-            @for (c of categories; track c) {
-              <mat-option [value]="c">{{ categoryLabels[c] }}</mat-option>
+
+      <fieldset>
+        <legend>Categoría</legend>
+        <div class="choices">
+          @for (c of categories; track c) {
+            <label class="choice" [class.on]="category === c">
+              <input type="radio" name="category" [value]="c" [(ngModel)]="category" />
+              <span class="icon" aria-hidden="true">{{ icons[c] }}</span>
+              {{ categoryLabels[c] }}
+            </label>
+          }
+        </div>
+      </fieldset>
+
+      @if (session.can('ADMIN', 'TECHNICIAN')) {
+        <fieldset>
+          <legend>Prioridad</legend>
+          <div class="segmented" role="group" aria-label="Prioridad">
+            @for (p of priorities; track p) {
+              <button type="button" [attr.aria-pressed]="priority === p" (click)="priority = p">{{ priorityLabels[p] }}</button>
             }
-          </mat-select>
-        </mat-form-field>
-        @if (session.can('ADMIN', 'TECHNICIAN')) {
-          <mat-form-field>
-            <mat-label>Prioridad</mat-label>
-            <mat-select name="priority" [(ngModel)]="priority">
-              @for (p of priorities; track p) {
-                <mat-option [value]="p">{{ priorityLabels[p] }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-        }
-      </div>
-      @if (!session.can('ADMIN', 'TECHNICIAN')) {
-        <p class="muted">El equipo de soporte asigna la prioridad al revisar tu ticket.</p>
+          </div>
+        </fieldset>
+      } @else {
+        <p class="note"><span class="icon" aria-hidden="true">info</span>El equipo de soporte define la prioridad al revisar tu ticket.</p>
       }
+
       @if (error(); as text) {
-        <p class="error" role="alert">{{ text }}</p>
+        <p class="error-text" role="alert">{{ text }}</p>
       }
-      <button mat-flat-button type="submit" [disabled]="saving()">Crear ticket</button>
+      <div class="foot">
+        <a mat-button routerLink="..">Cancelar</a>
+        <button mat-flat-button type="submit" class="btn-icon" [disabled]="saving()"><span class="icon">send</span>Crear ticket</button>
+      </div>
     </form>
   `,
   styles: `
-    h1 { font: var(--mat-sys-headline-medium); margin: 8px 0 16px; }
-    form { display: flex; flex-direction: column; max-width: 640px; }
-    .pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
-    .muted { color: var(--mat-sys-on-surface-variant); margin: 0 0 16px; }
-    .error { color: var(--mat-sys-error); }
-    button { align-self: flex-start; }
+    .crumbs { margin-bottom: 18px; font-size: 13px; }
+    .crumbs a { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); text-decoration: none; font-weight: 500; }
+    .crumbs .icon { font-size: 18px; }
+    form { display: flex; flex-direction: column; gap: 16px; max-width: 720px; box-sizing: border-box; }
+    fieldset { border: 0; margin: 0; padding: 0; }
+    legend { padding: 0; margin-bottom: 8px; font-size: 13px; font-weight: 600; }
+    .choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+    .choice { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px;
+      border: 1px solid var(--line-strong); border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 500; }
+    .choice input { position: absolute; opacity: 0; pointer-events: none; }
+    .choice .icon { font-size: 22px; color: var(--muted); }
+    .choice:hover { border-color: var(--ink); }
+    .choice.on { border-color: var(--ink); background: var(--ink); color: #fff; }
+    .choice.on .icon { color: var(--lime); }
+    .choice:focus-within { outline: 2px solid var(--lime-deep); outline-offset: 2px; }
+    .note { display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 12px; border-radius: 10px; background: #f1f0ea; font-size: 13.5px; color: var(--muted); }
+    .foot { display: flex; justify-content: flex-end; gap: 8px; padding-top: 4px; }
   `,
 })
 export class NewTicket {
@@ -73,6 +97,9 @@ export class NewTicket {
   protected readonly priorities = PRIORITIES;
   protected readonly categoryLabels = CATEGORY_LABELS;
   protected readonly priorityLabels = PRIORITY_LABELS;
+  protected readonly icons: Record<TicketCategory, string> = {
+    HARDWARE: 'computer', SOFTWARE: 'apps', NETWORK: 'wifi', ACCESS: 'key', OTHER: 'help',
+  };
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
   protected title = '';

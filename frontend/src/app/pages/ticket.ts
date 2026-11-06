@@ -4,15 +4,13 @@ import { Component, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom, map } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { apiError } from '../core/api-error';
-import { PriorityChip, StatusChip } from '../core/chips';
+import { Avatar, PriorityChip, StatusChip, ticketKey } from '../core/chips';
 import { SlaApi } from '../core/sla-api';
 import { SlaBadge } from '../core/sla-badge';
 import {
@@ -25,30 +23,41 @@ import { TicketsApi } from '../core/tickets-api';
 
 @Component({
   selector: 'app-ticket',
-  imports: [FormsModule, DatePipe, RouterLink, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatInputModule,
-    MatSelectModule, StatusChip, PriorityChip, SlaBadge],
+  imports: [FormsModule, DatePipe, RouterLink, MatButtonModule, MatFormFieldModule, MatSelectModule, StatusChip, PriorityChip, SlaBadge, Avatar],
   template: `
-    <a mat-button routerLink="/app/tickets">← Tickets</a>
+    <nav class="crumbs" aria-label="Ruta">
+      <a routerLink="/app/tickets"><span class="icon" aria-hidden="true">arrow_back</span>Tickets</a>
+      @if (ticket(); as t) {
+        <span aria-hidden="true">/</span><span class="mono">{{ key(t.number) }}</span>
+      }
+    </nav>
 
     @if (notFound()) {
-      <h1>Ticket no encontrado</h1>
-      <p class="muted">No existe o no tienes acceso a él.</p>
+      <section class="card card-pad notfound">
+        <span class="icon" aria-hidden="true">search_off</span>
+        <h1>Ticket no encontrado</h1>
+        <p class="muted">No existe o no tienes acceso a él.</p>
+      </section>
     } @else if (ticket(); as t) {
-      <header>
-        <p class="number">#{{ t.number }} · {{ categories[t.category] }}</p>
-        <h1>{{ t.title }}</h1>
-        <div class="chips">
+      <header class="head">
+        <div class="tags">
           <app-status-chip [status]="t.status" />
           <app-priority-chip [priority]="t.priority" />
+          <span class="tag-soft">{{ categories[t.category] }}</span>
         </div>
+        <h1>{{ t.title }}</h1>
+        <p class="by">
+          <app-avatar [name]="t.requester?.displayName" [size]="22" />
+          <span><strong>{{ t.requester?.displayName }}</strong> lo reportó el {{ t.createdAt | date: "d 'de' MMMM, HH:mm" }}</span>
+        </p>
       </header>
 
       @if (liveNote(); as note) {
-        <p class="live-note" role="status">{{ note }}</p>
+        <p class="banner live" role="status"><span class="icon" aria-hidden="true">bolt</span>{{ note }}</p>
       }
       @if (message(); as text) {
-        <p class="message" role="alert">
-          {{ text }}
+        <p class="banner warn" role="alert">
+          <span class="icon" aria-hidden="true">error</span>{{ text }}
           @if (stale()) {
             <button mat-button (click)="reload()">Recargar</button>
           }
@@ -57,150 +66,161 @@ import { TicketsApi } from '../core/tickets-api';
 
       <div class="layout">
         <section class="main">
-          <p class="description">{{ t.description }}</p>
-          <p class="muted small">
-            Reportado por {{ t.requester?.displayName }} el {{ t.createdAt | date: "d MMM y, HH:mm" }}
-          </p>
+          <article class="card card-pad description">{{ t.description }}</article>
 
-          <h2>Conversación</h2>
-          @for (c of t.comments; track c.id) {
-            <article class="comment" [class.internal]="c.internal">
-              <p class="author">
-                {{ c.author?.displayName }}
-                @if (c.internal) { <span class="tag">Nota interna</span> }
-                <time [attr.datetime]="c.createdAt">{{ c.createdAt | date: "d MMM, HH:mm" }}</time>
-              </p>
-              <p class="body">{{ c.body }}</p>
-            </article>
-          } @empty {
-            <p class="muted">Aún no hay comentarios.</p>
-          }
-
-          @if (t.attachments.length > 0 || t.canComment) {
-            <h2>Adjuntos</h2>
-            <ul class="files">
-              @for (a of t.attachments; track a.id) {
-                <li [class.internal]="a.internal">
-                  <button mat-button type="button" (click)="download(a)" [attr.aria-label]="'Descargar ' + a.filename">
-                    {{ a.filename }}
-                  </button>
-                  <small>
-                    {{ size(a.sizeBytes) }} · {{ a.uploader?.displayName }} · {{ a.createdAt | date: "d MMM, HH:mm" }}
-                    @if (a.internal) { · <span class="tag">Interno</span> }
-                  </small>
-                </li>
-              } @empty {
-                <li class="muted">Sin adjuntos.</li>
-              }
-            </ul>
-            @if (t.canComment) {
-              <div class="upload">
-                <input #picker type="file" hidden (change)="upload(picker)"
-                       accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.docx,.xlsx,.zip,.txt,.log,.csv" />
-                <button mat-stroked-button type="button" [disabled]="busy()" (click)="picker.click()">Adjuntar archivo</button>
-                <small class="muted">Imágenes, PDF, Office, ZIP o texto. Máximo 4 MB.</small>
-                @if (t.canCommentInternally) {
-                  <mat-checkbox [ngModel]="internalFile()" (ngModelChange)="internalFile.set($event)">Interno</mat-checkbox>
-                }
-              </div>
+          <h2 class="section">Conversación <span class="count mono">{{ t.comments.length }}</span></h2>
+          <ol class="thread">
+            @for (c of t.comments; track c.id) {
+              <li [class.internal]="c.internal">
+                <app-avatar [name]="c.author?.displayName" [size]="32" />
+                <div class="bubble">
+                  <p class="author">
+                    <strong>{{ c.author?.displayName }}</strong>
+                    @if (c.internal) { <span class="tag-internal"><span class="icon">lock</span>Nota interna</span> }
+                    <time [attr.datetime]="c.createdAt">{{ c.createdAt | date: "d MMM, HH:mm" }}</time>
+                  </p>
+                  <p class="body">{{ c.body }}</p>
+                </div>
+              </li>
+            } @empty {
+              <li class="empty muted">Aún no hay comentarios.</li>
             }
-          }
+          </ol>
 
           @if (t.canComment) {
-            <form class="reply" (ngSubmit)="comment()">
-              <mat-form-field>
-                <mat-label>{{ internal() ? 'Nota interna (el cliente no la ve)' : 'Responder' }}</mat-label>
-                <textarea matInput name="reply" rows="3" maxlength="5000" [ngModel]="reply()"
-                          (ngModelChange)="reply.set($event)"></textarea>
-              </mat-form-field>
-              <div class="actions">
-                @if (t.canCommentInternally) {
-                  <mat-checkbox name="internal" [ngModel]="internal()" (ngModelChange)="internal.set($event)">
-                    Nota interna
-                  </mat-checkbox>
-                }
-                <button mat-flat-button type="submit" [disabled]="busy() || !reply().trim()">Enviar</button>
+            <form class="composer card" [class.internal]="internal()" (ngSubmit)="comment()">
+              @if (t.canCommentInternally) {
+                <div class="tabs" role="tablist" aria-label="Tipo de mensaje">
+                  <button type="button" role="tab" [attr.aria-selected]="!internal()" (click)="internal.set(false)">
+                    <span class="icon">forum</span>Respuesta al cliente
+                  </button>
+                  <button type="button" role="tab" [attr.aria-selected]="internal()" (click)="internal.set(true)">
+                    <span class="icon">lock</span>Nota interna
+                  </button>
+                </div>
+              }
+              <textarea name="reply" rows="3" maxlength="5000" [ngModel]="reply()" (ngModelChange)="reply.set($event)"
+                        [attr.aria-label]="internal() ? 'Nota interna' : 'Respuesta'"
+                        [placeholder]="internal() ? 'Solo lo ve el equipo…' : 'Escribe una respuesta…'"></textarea>
+              <div class="composer-foot">
+                <input #picker type="file" hidden (change)="upload(picker)"
+                       accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.docx,.xlsx,.zip,.txt,.log,.csv" />
+                <button mat-button type="button" class="btn-icon" [disabled]="busy()" (click)="picker.click()"
+                        title="Imágenes, PDF, Office, ZIP o texto. Máximo 4 MB.">
+                  <span class="icon">attach_file</span>Adjuntar{{ internal() ? ' (interno)' : '' }}
+                </button>
+                <button mat-flat-button type="submit" class="btn-icon" [disabled]="busy() || !reply().trim()">
+                  <span class="icon">send</span>{{ internal() ? 'Guardar nota' : 'Enviar' }}
+                </button>
               </div>
             </form>
+          }
+
+          @if (t.attachments.length > 0) {
+            <h2 class="section">Adjuntos <span class="count mono">{{ t.attachments.length }}</span></h2>
+            <ul class="files">
+              @for (a of t.attachments; track a.id) {
+                <li>
+                  <button type="button" class="file card" (click)="download(a)" [attr.aria-label]="'Descargar ' + a.filename">
+                    <span class="file-icon icon" aria-hidden="true">{{ fileIcon(a.contentType) }}</span>
+                    <span class="file-text">
+                      <strong>{{ a.filename }}</strong>
+                      <small>{{ size(a.sizeBytes) }} · {{ a.uploader?.displayName }}{{ a.internal ? ' · interno' : '' }}</small>
+                    </span>
+                    <span class="icon dl" aria-hidden="true">download</span>
+                  </button>
+                </li>
+              }
+            </ul>
           }
         </section>
 
         <aside>
           @if (sla().length > 0) {
-            <h2>SLA</h2>
-            <dl class="sla">
+            <section class="card card-pad">
+              <h2 class="card-title">Acuerdo de servicio</h2>
               @for (c of sla(); track c.kind) {
-                <div>
-                  <dt>{{ slaLabels[c.kind] }}</dt>
-                  <dd>
+                <div class="clock" [class]="c.state.toLowerCase()">
+                  <div class="clock-head">
+                    <span>{{ slaLabels[c.kind] }}</span>
                     <app-sla-badge [clock]="c" />
-                    @if (c.dueAt && c.state !== 'MET' && c.state !== 'STOPPED') {
-                      <small>Límite: {{ c.dueAt | date: "EEE d MMM, HH:mm" }}{{ c.businessHours ? '' : ' · 24/7' }}</small>
-                    }
-                  </dd>
+                  </div>
+                  <div class="meter" aria-hidden="true"><i [style.width.%]="slaPercent(c)"></i></div>
+                  @if (c.dueAt && c.state !== 'MET' && c.state !== 'STOPPED') {
+                    <small>Límite {{ c.dueAt | date: "EEE d MMM, HH:mm" }} · {{ c.businessHours ? 'horario hábil' : '24/7' }}</small>
+                  }
                 </div>
               }
-            </dl>
+            </section>
           }
 
           @if (t.nextStatuses.length > 0) {
-            <h2>Estado</h2>
-            <div class="buttons">
-              @for (s of t.nextStatuses; track s) {
-                <button mat-stroked-button [disabled]="busy()" (click)="move(s)">{{ statusActions[s] }}</button>
+            <section class="card card-pad">
+              <h2 class="card-title">Mover a</h2>
+              <div class="moves">
+                @for (s of t.nextStatuses; track s) {
+                  <button mat-stroked-button [disabled]="busy()" (click)="move(s)">{{ statusActions[s] }}</button>
+                }
+              </div>
+            </section>
+          }
+
+          <section class="card card-pad">
+            <h2 class="card-title">Responsable</h2>
+            @if (t.canAssign) {
+              <mat-form-field class="field">
+                <mat-select [value]="t.assignee?.id ?? null" (valueChange)="assign($event)" [disabled]="busy()"
+                            [canSelectNullableOptions]="true" aria-label="Responsable">
+                  <mat-option [value]="null">Sin asignar</mat-option>
+                  @for (m of assignable(); track m.userId) {
+                    <mat-option [value]="m.userId">{{ m.displayName }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              @if (!t.assignee && session.can('TECHNICIAN')) {
+                <button mat-flat-button class="take btn-icon" (click)="assign(session.me()!.id)" [disabled]="busy()">
+                  <span class="icon">front_hand</span>Tomármelo
+                </button>
               }
-            </div>
-          }
-
-          <h2>Responsable</h2>
-          @if (t.canAssign) {
-            <mat-form-field subscriptSizing="dynamic">
-              <mat-label>Asignado a</mat-label>
-              <mat-select [value]="t.assignee?.id ?? null" (valueChange)="assign($event)" [disabled]="busy()"
-                          [canSelectNullableOptions]="true">
-                <mat-option [value]="null">Sin asignar</mat-option>
-                @for (m of assignable(); track m.userId) {
-                  <mat-option [value]="m.userId">{{ m.displayName }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-            @if (!t.assignee && session.can('TECHNICIAN')) {
-              <button mat-button (click)="assign(session.me()!.id)" [disabled]="busy()">Tomármelo</button>
+            } @else {
+              <p class="person">
+                <app-avatar [name]="t.assignee?.displayName" [size]="28" />{{ t.assignee?.displayName ?? 'Sin asignar' }}
+              </p>
             }
-          } @else {
-            <p>{{ t.assignee?.displayName ?? 'Sin asignar' }}</p>
-          }
 
-          @if (t.canTriage) {
-            <h2>Clasificación</h2>
-            <mat-form-field subscriptSizing="dynamic">
-              <mat-label>Prioridad</mat-label>
-              <mat-select [value]="t.priority" (valueChange)="triage($event, t.category)" [disabled]="busy()">
-                @for (p of priorities; track p) {
-                  <mat-option [value]="p">{{ priorityLabels[p] }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-            <mat-form-field subscriptSizing="dynamic">
-              <mat-label>Categoría</mat-label>
-              <mat-select [value]="t.category" (valueChange)="triage(t.priority, $event)" [disabled]="busy()">
-                @for (c of categoryList; track c) {
-                  <mat-option [value]="c">{{ categories[c] }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-          }
+            @if (t.canTriage) {
+              <h2 class="card-title sub">Clasificación</h2>
+              <mat-form-field class="field">
+                <mat-label>Prioridad</mat-label>
+                <mat-select [value]="t.priority" (valueChange)="triage($event, t.category)" [disabled]="busy()">
+                  @for (p of priorities; track p) {
+                    <mat-option [value]="p">{{ priorityLabels[p] }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field class="field">
+                <mat-label>Categoría</mat-label>
+                <mat-select [value]="t.category" (valueChange)="triage(t.priority, $event)" [disabled]="busy()">
+                  @for (c of categoryList; track c) {
+                    <mat-option [value]="c">{{ categories[c] }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            }
+          </section>
 
           @if (history().length > 0) {
-            <h2>Historial</h2>
-            <ol class="history">
-              @for (e of history(); track e.id) {
-                <li>
-                  <strong>{{ e.actor?.displayName ?? 'Sistema' }}</strong> {{ describe(e) }}
-                  <time [attr.datetime]="e.occurredAt">{{ e.occurredAt | date: "d MMM, HH:mm" }}</time>
-                </li>
-              }
-            </ol>
+            <section class="card card-pad">
+              <h2 class="card-title">Historial</h2>
+              <ol class="history">
+                @for (e of history(); track e.id) {
+                  <li [class.system]="!e.actor" [class.alert]="e.action === 'SLA_BREACHED'">
+                    <p><strong>{{ e.actor?.displayName ?? 'Sistema' }}</strong> {{ describe(e) }}</p>
+                    <time class="mono" [attr.datetime]="e.occurredAt">{{ e.occurredAt | date: "d MMM, HH:mm" }}</time>
+                  </li>
+                }
+              </ol>
+            </section>
           }
         </aside>
       </div>
@@ -209,43 +229,94 @@ import { TicketsApi } from '../core/tickets-api';
     }
   `,
   styles: `
-    header { margin: 8px 0 16px; }
-    .number { margin: 0; color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-label-large); }
-    h1 { font: var(--mat-sys-headline-medium); margin: 4px 0 8px; }
-    h2 { font: var(--mat-sys-title-medium); margin: 24px 0 8px; }
-    .chips { display: flex; gap: 12px; align-items: center; }
-    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 40px; }
-    aside { display: flex; flex-direction: column; gap: 8px; }
-    aside h2:first-child { margin-top: 0; }
-    .description, .body { white-space: pre-wrap; overflow-wrap: anywhere; }
-    .description { font: var(--mat-sys-body-large); margin-top: 0; }
-    .comment { padding: 12px 16px; border-radius: 12px; background: var(--mat-sys-surface-container-low); margin-bottom: 12px; }
-    .comment.internal { background: var(--mat-sys-tertiary-container); color: var(--mat-sys-on-tertiary-container); }
-    .author { display: flex; gap: 8px; align-items: center; margin: 0 0 4px; font: var(--mat-sys-label-large); }
-    .author time { margin-left: auto; font: var(--mat-sys-body-small); opacity: .75; }
-    .tag { font: var(--mat-sys-label-small); padding: 1px 8px; border-radius: 999px; box-shadow: inset 0 0 0 1px currentColor; }
-    .body { margin: 0; }
-    .files { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-direction: column; gap: 2px; }
-    .files li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
-    .files li.internal button { color: var(--mat-sys-tertiary); }
-    .files small, .upload small { color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-body-small); }
-    .upload { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 8px; }
-    .reply { display: flex; flex-direction: column; margin-top: 16px; }
-    .actions { display: flex; align-items: center; justify-content: flex-end; gap: 16px; }
-    .buttons { display: flex; flex-wrap: wrap; gap: 8px; }
-    .sla { margin: 0; display: flex; flex-direction: column; gap: 10px; }
-    .sla dt { font: var(--mat-sys-label-medium); color: var(--mat-sys-on-surface-variant); }
-    .sla dd { margin: 2px 0 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
-    .sla small { color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-body-small); }
-    .history { list-style: none; padding: 0; margin: 0; font: var(--mat-sys-body-small); }
-    .history li { padding: 6px 0; border-bottom: 1px solid var(--mat-sys-outline-variant); }
-    .history time { display: block; color: var(--mat-sys-on-surface-variant); }
-    .muted { color: var(--mat-sys-on-surface-variant); }
-    .small { font: var(--mat-sys-body-small); }
-    .live-note { color: var(--mat-sys-primary); font: var(--mat-sys-label-large); }
-    .message { display: flex; align-items: center; gap: 8px; color: var(--mat-sys-error); }
-    @media (max-width: 800px) {
-      .layout { grid-template-columns: 1fr; gap: 8px; }
+    .crumbs { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; font-size: 13px; color: var(--muted); }
+    .crumbs a { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); text-decoration: none; font-weight: 500; }
+    .crumbs a:hover { color: var(--ink); }
+    .crumbs .icon { font-size: 18px; }
+    .notfound { text-align: center; padding: 48px 20px; }
+    .notfound .icon { font-size: 40px; color: var(--line-strong); }
+
+    .head { margin-bottom: 20px; }
+    .tags { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    .tag-soft { padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line-strong); font-size: 12.5px; color: var(--muted); }
+    h1 { margin: 12px 0 10px; font-size: clamp(24px, 3vw, 32px); line-height: 1.15; font-weight: 650; }
+    .by { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 14px; color: var(--muted); }
+    .by strong { color: var(--text); font-weight: 600; }
+
+    .banner { display: flex; align-items: center; gap: 8px; margin: 0 0 16px; padding: 10px 14px; border-radius: 10px; font-size: 14px; }
+    .banner.live { background: #ecfccb; color: #1a2e05; }
+    .banner.warn { background: #fdecec; color: #8a1c1c; }
+
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 28px; align-items: start; }
+    aside { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 24px; }
+    .description { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 15.5px; line-height: 1.65; }
+    .section { display: flex; align-items: center; gap: 8px; margin: 28px 0 14px; font-size: 18px; font-weight: 650; }
+    .count { font-size: 12px; padding: 2px 7px; border-radius: 6px; background: #e9e7df; color: var(--muted); font-weight: 500; }
+
+    .thread { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+    .thread li { display: flex; gap: 12px; align-items: flex-start; }
+    .bubble { flex: 1; min-width: 0; padding: 12px 16px; border-radius: 4px 14px 14px 14px; background: var(--card); border: 1px solid var(--line); }
+    .internal .bubble { background: #fffaeb; border-color: #f5dfa0; }
+    .author { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 0 4px; font-size: 13.5px; }
+    .author time { margin-left: auto; font-size: 12px; color: var(--muted); }
+    .tag-internal { display: inline-flex; align-items: center; gap: 3px; padding: 1px 8px 1px 5px; border-radius: 999px;
+      background: #fdf0c8; color: #713f12; font-size: 11.5px; font-weight: 500; }
+    .tag-internal .icon { font-size: 13px; }
+    .body { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.55; }
+    .thread .empty { padding: 4px 0; }
+
+    .composer { margin-top: 16px; overflow: hidden; }
+    .composer.internal { border-color: #f5dfa0; }
+    .tabs { display: flex; border-bottom: 1px solid var(--line); background: #faf9f6; }
+    .tabs button { display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; cursor: pointer;
+      padding: 11px 16px; font: 500 13.5px var(--font-ui); color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+    .tabs button .icon { font-size: 17px; }
+    .tabs button[aria-selected='true'] { color: var(--ink); border-bottom-color: var(--ink); }
+    .composer.internal .tabs button[aria-selected='true'] { border-bottom-color: #d58a06; }
+    textarea { display: block; width: 100%; box-sizing: border-box; border: 0; resize: vertical; min-height: 92px; padding: 14px 16px;
+      font: 400 15px/1.55 var(--font-ui); color: var(--text); background: transparent; outline: none; }
+    .composer.internal textarea { background: #fffdf5; }
+    .composer-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 10px; border-top: 1px solid var(--line); }
+
+    .files { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+    .file { width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px; text-align: left; cursor: pointer; font: inherit; color: inherit; }
+    .file:hover { border-color: var(--line-strong); }
+    .file-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 9px; background: #efeee8; color: var(--ink); flex: none; }
+    .file-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+    .file-text strong { font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-text small { font-size: 12px; color: var(--muted); }
+    .dl { color: var(--muted); }
+
+    .card-title.sub { margin-top: 18px; }
+    .card-title + * { margin-top: 12px; }
+    .clock + .clock { margin-top: 16px; }
+    .clock-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 500; }
+    .meter { height: 6px; border-radius: 3px; background: #ecebe5; margin: 8px 0 6px; overflow: hidden; }
+    .meter i { display: block; height: 100%; border-radius: 3px; background: var(--ink); }
+    .at_risk .meter i { background: #d58a06; }
+    .breached .meter i { background: var(--danger); }
+    .met .meter i { background: #1f9d4c; }
+    .paused .meter i { background: #a8a29e; }
+    .clock small { font-size: 12px; color: var(--muted); }
+    .moves { display: flex; flex-direction: column; gap: 8px; }
+    .moves button { justify-content: flex-start; }
+    .field { width: 100%; }
+    .field + .field { margin-top: 10px; }
+    .take { width: 100%; margin-top: 10px; }
+    .person { display: flex; align-items: center; gap: 10px; margin: 12px 0 0; font-weight: 500; }
+
+    .history { list-style: none; margin: 12px 0 0; padding: 0 0 0 14px; border-left: 2px solid var(--line); display: flex; flex-direction: column; gap: 12px; }
+    .history li { position: relative; font-size: 13px; }
+    .history li::before { content: ''; position: absolute; left: -20px; top: 5px; width: 10px; height: 10px; border-radius: 50%;
+      background: var(--card); border: 2px solid var(--line-strong); }
+    .history li.system::before { border-color: #d58a06; }
+    .history li.alert::before { background: var(--danger); border-color: var(--danger); }
+    .history p { margin: 0; line-height: 1.45; }
+    .history time { font-size: 11.5px; color: var(--muted); }
+
+    @media (max-width: 960px) {
+      .layout { grid-template-columns: 1fr; }
+      aside { position: static; }
     }
   `,
 })
@@ -275,7 +346,6 @@ export class Ticket {
   protected readonly assignable = computed(() =>
     this.members().filter((m) => !m.pending && m.userId && m.role !== 'CUSTOMER'));
   protected readonly reply = signal('');
-  protected readonly internalFile = signal(false);
   protected readonly internal = signal(false);
   protected readonly liveNote = signal<string | null>(null);
   private loadedOrg: string | null = null;
@@ -361,8 +431,27 @@ export class Ticket {
     await this.update((t) => this.api.comment(this.org(), t, body, this.internal()));
     if (!this.message()) {
       this.reply.set('');
-      this.internal.set(false);
     }
+  }
+
+  protected key(number: number): string {
+    return ticketKey(this.session.organization()?.slug, number);
+  }
+
+  /** Cuánto del plazo ya se consumió, para la barra. */
+  protected slaPercent(clock: SlaClock): number {
+    if (clock.state === 'MET' || clock.state === 'STOPPED') return 100;
+    const remaining = clock.remainingMinutes ?? 0;
+    return Math.min(100, Math.max(2, (1 - remaining / clock.targetMinutes) * 100));
+  }
+
+  protected fileIcon(contentType: string): string {
+    if (contentType.startsWith('image/')) return 'image';
+    if (contentType === 'application/pdf') return 'picture_as_pdf';
+    if (contentType.includes('spreadsheet') || contentType.startsWith('text/csv')) return 'table_chart';
+    if (contentType.includes('word')) return 'description';
+    if (contentType === 'application/zip') return 'folder_zip';
+    return 'article';
   }
 
   protected size(bytes: number): string {
@@ -377,8 +466,7 @@ export class Ticket {
       this.message.set('El archivo supera el máximo de 4 MB.');
       return;
     }
-    await this.update((t) => this.api.attach(this.org(), t, file, this.internalFile()));
-    if (!this.message()) this.internalFile.set(false);
+    await this.update((t) => this.api.attach(this.org(), t, file, this.internal()));
   }
 
   protected async download(attachment: TicketAttachment): Promise<void> {

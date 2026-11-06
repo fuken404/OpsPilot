@@ -1,13 +1,9 @@
-import { DatePipe } from '@angular/common';
 import { Component, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
 import { RouterLink } from '@angular/router';
 import { apiError } from '../core/api-error';
-import { PriorityChip, StatusChip } from '../core/chips';
+import { Avatar, PriorityChip, StatusChip, ticketKey, timeAgo } from '../core/chips';
 import { SlaApi } from '../core/sla-api';
 import { SlaBadge } from '../core/sla-badge';
 import { CATEGORY_LABELS, SlaClock, TicketSummary } from '../core/models';
@@ -17,89 +13,120 @@ import { AssigneeFilter, TicketsApi, TicketView } from '../core/tickets-api';
 
 @Component({
   selector: 'app-tickets',
-  imports: [FormsModule, DatePipe, RouterLink, MatButtonModule, MatButtonToggleModule, MatFormFieldModule,
-    MatInputModule, StatusChip, PriorityChip, SlaBadge],
+  imports: [FormsModule, RouterLink, MatButtonModule, StatusChip, PriorityChip, SlaBadge, Avatar],
   template: `
-    <header class="head">
-      <h1>Tickets</h1>
-      <a mat-flat-button routerLink="nuevo">Nuevo ticket</a>
+    <header class="page-head">
+      <div>
+        <p class="eyebrow">{{ session.organization()?.name }}</p>
+        <h1>Tickets</h1>
+      </div>
+      <a mat-flat-button routerLink="nuevo" class="btn-icon"><span class="icon">add</span>Nuevo ticket</a>
     </header>
 
-    <div class="filters">
-      <mat-button-toggle-group aria-label="Estado" [value]="view()" (change)="view.set($event.value)">
-        <mat-button-toggle value="OPEN">Abiertos</mat-button-toggle>
-        <mat-button-toggle value="CLOSED">Cerrados</mat-button-toggle>
-        <mat-button-toggle value="ALL">Todos</mat-button-toggle>
-      </mat-button-toggle-group>
+    <div class="toolbar">
+      <div class="segmented" role="group" aria-label="Estado">
+        @for (option of views; track option.value) {
+          <button type="button" [attr.aria-pressed]="view() === option.value" (click)="view.set(option.value)">
+            {{ option.label }}
+          </button>
+        }
+      </div>
       @if (session.can('ADMIN', 'TECHNICIAN')) {
-        <mat-button-toggle-group aria-label="Responsable" [value]="assignee()" (change)="assignee.set($event.value)">
-          <mat-button-toggle value="ANY">Todos</mat-button-toggle>
-          <mat-button-toggle value="MINE">Míos</mat-button-toggle>
-          <mat-button-toggle value="UNASSIGNED">Sin asignar</mat-button-toggle>
-        </mat-button-toggle-group>
+        <div class="segmented" role="group" aria-label="Responsable">
+          @for (option of assignees; track option.value) {
+            <button type="button" [attr.aria-pressed]="assignee() === option.value" (click)="assignee.set(option.value)">
+              {{ option.label }}
+            </button>
+          }
+        </div>
       }
-      <mat-form-field class="search" subscriptSizing="dynamic">
-        <mat-label>Buscar por título</mat-label>
-        <input matInput type="search" [ngModel]="query()" (ngModelChange)="search($event)" />
-      </mat-form-field>
+      <label class="search">
+        <span class="icon" aria-hidden="true">search</span>
+        <span class="sr-only">Buscar por título</span>
+        <input type="search" placeholder="Buscar por título" [ngModel]="query()" (ngModelChange)="search($event)" />
+      </label>
     </div>
 
-    @if (error(); as text) {
-      <p class="error" role="alert">{{ text }}</p>
-    } @else if (loading() && tickets().length === 0) {
-      <p class="muted">Cargando…</p>
-    } @else if (tickets().length === 0) {
-      <p class="muted">No hay tickets con estos filtros.</p>
-    } @else {
-      <ul class="list">
-        @for (t of tickets(); track t.id) {
-          <li>
-            <a [routerLink]="t.id" class="row">
-              <span class="number">#{{ t.number }}</span>
-              <span class="title">{{ t.title }}</span>
-              <span class="meta">
-                {{ categories[t.category] }} · {{ t.requester?.displayName }}
-                · {{ t.assignee ? t.assignee.displayName : 'Sin asignar' }}
-              </span>
-              <app-priority-chip class="priority" [priority]="t.priority" />
-              <app-status-chip class="status" [status]="t.status" />
-              <span class="sla">
-                @if (urgent().get(t.id); as clock) {
-                  <app-sla-badge [clock]="clock" />
-                }
-              </span>
-              <time class="date" [attr.datetime]="t.updatedAt">{{ t.updatedAt | date: 'd MMM, HH:mm' }}</time>
-            </a>
-          </li>
-        }
-      </ul>
-    }
+    <section class="card list" [attr.aria-busy]="loading()">
+      <div class="list-head" aria-hidden="true">
+        <span>Ticket</span><span>Prioridad</span><span>Estado</span><span>SLA</span><span>Responsable</span><span>Actualizado</span>
+      </div>
+      @if (error(); as text) {
+        <p class="empty error-text" role="alert">{{ text }}</p>
+      } @else if (loading() && tickets().length === 0) {
+        <p class="empty muted">Cargando…</p>
+      } @else if (tickets().length === 0) {
+        <div class="empty">
+          <span class="icon big" aria-hidden="true">inbox</span>
+          <p><strong>Nada por aquí.</strong></p>
+          <p class="muted">No hay tickets con estos filtros.</p>
+        </div>
+      } @else {
+        <ul>
+          @for (t of tickets(); track t.id) {
+            <li>
+              <a [routerLink]="t.id" class="row">
+                <span class="main">
+                  <span class="key mono">{{ key(t.number) }}</span>
+                  <span class="title">{{ t.title }}</span>
+                  <span class="meta">{{ categories[t.category] }} · {{ t.requester?.displayName }}</span>
+                </span>
+                <app-priority-chip class="c-prio" [priority]="t.priority" />
+                <app-status-chip class="c-status" [status]="t.status" />
+                <span class="c-sla">
+                  @if (urgent().get(t.id); as clock) {
+                    <app-sla-badge [clock]="clock" />
+                  } @else {
+                    <span class="muted">—</span>
+                  }
+                </span>
+                <span class="c-who">
+                  <app-avatar [name]="t.assignee?.displayName" [size]="26" />
+                  <span class="who-name">{{ t.assignee?.displayName ?? 'Sin asignar' }}</span>
+                </span>
+                <time class="c-date mono" [attr.datetime]="t.updatedAt">{{ ago(t.updatedAt) }}</time>
+              </a>
+            </li>
+          }
+        </ul>
+      }
+    </section>
   `,
   styles: `
-    .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-    h1 { font: var(--mat-sys-headline-medium); margin: 8px 0; }
-    .filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 12px 0 20px; }
-    .search { flex: 1; min-width: 200px; }
-    .list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--mat-sys-outline-variant); }
-    .row {
-      display: grid; grid-template-columns: 56px 1fr auto auto 150px 96px;
-      grid-template-areas: "num title prio status sla date" "num meta prio status sla date";
-      column-gap: 16px; align-items: center; padding: 12px 8px; color: inherit; text-decoration: none;
-      border-bottom: 1px solid var(--mat-sys-outline-variant);
-    }
-    .row:hover, .row:focus-visible { background: var(--mat-sys-surface-container-low); }
-    .number { grid-area: num; color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-label-large); }
-    .title { grid-area: title; font: var(--mat-sys-title-small); }
-    .meta { grid-area: meta; color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-body-small); }
-    .priority { grid-area: prio; }
-    .status { grid-area: status; }
-    .sla { grid-area: sla; text-align: right; }
-    .date { grid-area: date; text-align: right; color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-body-small); }
-    .muted { color: var(--mat-sys-on-surface-variant); }
-    .error { color: var(--mat-sys-error); }
-    @media (max-width: 640px) {
-      .row { grid-template-columns: auto auto 1fr auto; grid-template-areas: "num title title title" "meta meta meta meta" "prio status sla date"; row-gap: 6px; }
-      .status { justify-self: start; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; }
+    .search { flex: 1; min-width: 220px; display: flex; align-items: center; gap: 8px; padding: 0 12px; height: 40px;
+      background: var(--card); border: 1px solid var(--line-strong); border-radius: 10px; }
+    .search:focus-within { border-color: var(--lime-deep); box-shadow: 0 0 0 3px #ecfccb; }
+    .search .icon { color: var(--muted); }
+    .search input { flex: 1; border: 0; outline: none; background: transparent; font: 400 14px var(--font-ui); color: var(--text); }
+
+    .list { overflow: hidden; }
+    .list-head, .row { display: grid; grid-template-columns: minmax(0, 1fr) 92px 128px 150px 140px 70px; gap: 16px; align-items: center; }
+    .list-head { padding: 10px 20px; border-bottom: 1px solid var(--line); background: #faf9f6;
+      font: 500 11px/1 var(--font-mono); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+    ul { list-style: none; margin: 0; padding: 0; }
+    li + li { border-top: 1px solid var(--line); }
+    .row { padding: 14px 20px; color: inherit; text-decoration: none; transition: background .12s ease; }
+    .row:hover { background: #faf9f6; }
+    .row:focus-visible { outline: 2px solid var(--lime-deep); outline-offset: -2px; }
+    .main { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; row-gap: 2px; min-width: 0; }
+    .key { grid-row: span 2; align-self: start; padding: 3px 7px; border-radius: 6px; background: #efeee8; font-size: 11.5px; color: var(--muted); }
+    .title { font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .meta { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .c-who { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .who-name { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .c-date { font-size: 12px; color: var(--muted); text-align: right; }
+    .empty { padding: 48px 20px; text-align: center; margin: 0; }
+    .empty p { margin: 4px 0; }
+    .big { font-size: 40px; color: var(--line-strong); }
+
+    @media (max-width: 1080px) {
+      .list-head { display: none; }
+      .row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; }
+      .main { flex-basis: 100%; }
+      .who-name { display: none; }
+      .c-sla:has(.muted) { display: none; }
+      .c-date { margin-left: auto; }
     }
   `,
 })
@@ -108,6 +135,12 @@ export class Tickets {
   private readonly api = inject(TicketsApi);
   private readonly slaApi = inject(SlaApi);
   protected readonly categories = CATEGORY_LABELS;
+  protected readonly views: { value: TicketView; label: string }[] = [
+    { value: 'OPEN', label: 'Abiertos' }, { value: 'CLOSED', label: 'Cerrados' }, { value: 'ALL', label: 'Todos' },
+  ];
+  protected readonly assignees: { value: AssigneeFilter; label: string }[] = [
+    { value: 'ANY', label: 'Todos' }, { value: 'MINE', label: 'Míos' }, { value: 'UNASSIGNED', label: 'Sin asignar' },
+  ];
   protected readonly view = signal<TicketView>('OPEN');
   protected readonly assignee = signal<AssigneeFilter>('ANY');
   protected readonly query = signal('');
@@ -135,6 +168,14 @@ export class Tickets {
       const query = this.query();
       if (org) void this.load(org.organizationId, view, assignee, query);
     });
+  }
+
+  protected key(number: number): string {
+    return ticketKey(this.session.organization()?.slug, number);
+  }
+
+  protected ago(iso: string): string {
+    return timeAgo(iso);
   }
 
   protected search(text: string): void {

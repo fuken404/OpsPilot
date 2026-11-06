@@ -22,18 +22,23 @@ interface Row {
   selector: 'app-sla-policies',
   imports: [FormsModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatInputModule, PriorityChip],
   template: `
-    <h1>Acuerdos de servicio</h1>
-    <p class="muted">
-      Tiempo máximo para la primera respuesta del equipo y para resolver, según la prioridad. En horario laboral
-      cuentan solo de lunes a viernes de 8:00 a 18:00 (hora de Colombia), sin festivos. Esperar al cliente pausa la
-      resolución. Los cambios aplican a los tickets nuevos y a los que cambien de prioridad.
-    </p>
+    <header class="page-head">
+      <div>
+        <p class="eyebrow">{{ session.organization()?.name }}</p>
+        <h1>Acuerdos de servicio</h1>
+        <p class="lede">
+          Tiempo máximo para la primera respuesta y para resolver, según la prioridad. En horario hábil cuentan de lunes
+          a viernes de 8:00 a 18:00 (hora de Colombia), sin festivos, y esperar al cliente pausa la resolución.
+        </p>
+      </div>
+    </header>
+    <p class="note"><span class="icon" aria-hidden="true">info</span>Los cambios aplican a los tickets nuevos y a los que cambien de prioridad.</p>
     @if (message(); as text) {
       <p class="message" role="status">{{ text }}</p>
     }
     <div class="grid">
       @for (row of rows(); track row.policy.priority) {
-        <form class="card" (ngSubmit)="save(row)">
+        <form class="card card-pad policy" (ngSubmit)="save(row)">
           <app-priority-chip [priority]="row.policy.priority" />
           @if (editable()) {
             <mat-form-field subscriptSizing="dynamic">
@@ -60,13 +65,13 @@ interface Row {
     </div>
   `,
   styles: `
-    h1 { font: var(--mat-sys-headline-medium); margin: 8px 0; }
-    .muted { color: var(--mat-sys-on-surface-variant); max-width: 70ch; }
-    .message { color: var(--mat-sys-primary); }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; margin-top: 16px; }
-    .card { display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 12px;
-      border: 1px solid var(--mat-sys-outline-variant); }
-    .card p { margin: 0; }
+    .note { display: flex; align-items: center; gap: 8px; margin: 0 0 16px; font-size: 13.5px; color: var(--muted); }
+    .note .icon { font-size: 18px; }
+    .message { color: var(--lime-deep); font-weight: 500; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+    .policy { display: flex; flex-direction: column; gap: 12px; }
+    .policy p { margin: 0; }
+    .policy p strong { font-family: var(--font-mono); font-weight: 500; }
     button { align-self: flex-start; }
   `,
 })
