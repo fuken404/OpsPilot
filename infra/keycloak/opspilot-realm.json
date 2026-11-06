@@ -11,7 +11,10 @@
   "accessTokenLifespan": 300,
   "ssoSessionIdleTimeout": 1800,
   "internationalizationEnabled": true,
-  "supportedLocales": ["es", "en"],
+  "supportedLocales": [
+    "es",
+    "en"
+  ],
   "defaultLocale": "es",
   "clients": [
     {
@@ -22,8 +25,12 @@
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": false,
       "implicitFlowEnabled": false,
-      "redirectUris": ["http://localhost:4200/*"],
-      "webOrigins": ["http://localhost:4200"],
+      "redirectUris": [
+        "http://localhost:4200/*"
+      ],
+      "webOrigins": [
+        "http://localhost:4200"
+      ],
       "attributes": {
         "pkce.code.challenge.method": "S256",
         "post.logout.redirect.uris": "http://localhost:4200/*"
@@ -50,7 +57,13 @@
       "lastName": "Rojas",
       "enabled": true,
       "emailVerified": true,
-      "credentials": [{ "type": "password", "value": "demo-opspilot", "temporary": false }]
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo-opspilot",
+          "temporary": false
+        }
+      ]
     },
     {
       "username": "tomas.tecnico",
@@ -59,7 +72,13 @@
       "lastName": "Gil",
       "enabled": true,
       "emailVerified": true,
-      "credentials": [{ "type": "password", "value": "demo-opspilot", "temporary": false }]
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo-opspilot",
+          "temporary": false
+        }
+      ]
     },
     {
       "username": "carla.cliente",
@@ -68,7 +87,13 @@
       "lastName": "Méndez",
       "enabled": true,
       "emailVerified": true,
-      "credentials": [{ "type": "password", "value": "demo-opspilot", "temporary": false }]
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo-opspilot",
+          "temporary": false
+        }
+      ]
     },
     {
       "username": "lucia.cliente",
@@ -77,7 +102,14 @@
       "lastName": "Peña",
       "enabled": true,
       "emailVerified": true,
-      "credentials": [{ "type": "password", "value": "demo-opspilot", "temporary": false }]
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo-opspilot",
+          "temporary": false
+        }
+      ]
     }
-  ]
+  ],
+  "loginTheme": "opspilot"
 }

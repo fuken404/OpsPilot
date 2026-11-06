@@ -1,0 +1,109 @@
+/* Estilo de OpsPilot sobre el tema v2 de Keycloak (PatternFly 5): grafito, lavanda y Nunito. */
+:root {
+  --op-ink: #27272a;
+  --op-ink-2: #3f3f46;
+  --op-ink-text: #e4e4e7;
+  --op-ink-muted: #a1a1aa;
+  --op-accent: #7c3aed;
+  --op-accent-dark: #6d28d9;
+  --op-accent-light: #a78bfa;
+  --op-soft: #ede9fe;
+  --op-line: #dcdce3;
+  --op-muted: #71717a;
+  --op-paper: #fafafa;
+  --pf-v5-global--FontFamily--text: 'Nunito', system-ui, sans-serif;
+  --pf-v5-global--FontFamily--heading: 'Nunito', system-ui, sans-serif;
+  --pf-v5-global--primary-color--100: var(--op-accent);
+  --pf-v5-global--primary-color--200: var(--op-accent-dark);
+  --pf-v5-global--link--Color: var(--op-accent-dark);
+  --pf-v5-global--link--Color--hover: #4c1d95;
+  --pf-v5-global--active-color--100: var(--op-accent);
+}
+
+.login-pf body, body.op-body { background: var(--op-paper) !important; font-family: 'Nunito', system-ui, sans-serif; color: var(--op-ink); }
+
+.op-shell { min-height: 100vh; display: grid; grid-template-columns: minmax(360px, 44%) 1fr; }
+
+/* Panel de marca */
+.op-brand { position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; gap: 32px;
+  padding: 40px clamp(28px, 4vw, 56px); color: var(--op-ink-text);
+  background: radial-gradient(700px 420px at 100% 0%, #3b2a63 0%, transparent 60%), var(--op-ink); }
+.op-brand::after { content: ''; position: absolute; width: 380px; height: 380px; right: -120px; bottom: -140px; border-radius: 50%;
+  background: radial-gradient(circle, rgb(167 139 250 / 22%), transparent 65%); pointer-events: none; }
+.op-logo, .op-mobile-logo { display: flex; align-items: center; gap: 12px; font: 900 22px/1 'Nunito', sans-serif; color: #fff; }
+.op-kicker { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 22px; padding: 7px 14px; border-radius: 999px;
+  background: var(--op-ink-2); font: 700 13px/1 'Nunito', sans-serif; }
+.op-kicker i { width: 7px; height: 7px; border-radius: 50%; background: var(--op-accent-light); }
+.op-title { margin: 0 0 28px; font: 900 clamp(40px, 4.6vw, 62px)/1.02 'Nunito', sans-serif; letter-spacing: -0.03em; color: #fff; }
+.op-title span { color: var(--op-accent-light); }
+.op-points { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; font-size: 16px; }
+.op-points li { display: flex; align-items: center; gap: 12px; }
+.op-points b { width: 28px; height: 28px; border-radius: 50%; flex: none; display: grid; place-items: center; }
+.op-points b::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.op-points .t1 { background: #ede9fe; color: #6d28d9; }
+.op-points .t2 { background: #fce7f3; color: #be185d; }
+.op-points .t3 { background: #e0f2fe; color: #0369a1; }
+.op-demo { position: relative; z-index: 1; margin: 0; padding: 12px 16px; border-radius: 16px; background: var(--op-ink-2);
+  font-size: 13.5px; line-height: 1.5; color: var(--op-ink-text); }
+
+/* Lado del formulario */
+.op-login.pf-v5-c-login { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 32px 20px; background: none; }
+.op-login .pf-v5-c-login__container { display: block; width: 100%; max-width: 440px; padding: 0; }
+.op-mobile-logo { display: none; color: var(--op-ink); margin-bottom: 20px; justify-content: center; }
+.op-demo-mobile { display: none; margin-top: 16px; background: #f1effa; color: #4c1d95; text-align: center; }
+.op-login .pf-v5-c-login__main { background: #fff; border: 1px solid #ececf0; border-radius: 24px;
+  box-shadow: 0 1px 2px rgb(39 39 42 / 4%), 0 18px 40px -20px rgb(76 29 149 / 25%); }
+.op-login .pf-v5-c-login__main-header { border-top: 0; padding: 36px 36px 8px; }
+.op-login .pf-v5-c-login__main-body { padding: 16px 36px 8px; }
+.op-login .pf-v5-c-login__main-footer { padding: 8px 36px 28px; }
+#kc-page-title { font: 900 28px/1.15 'Nunito', sans-serif; letter-spacing: -0.02em; color: var(--op-ink); }
+
+.op-login .pf-v5-c-form__label-text { font-weight: 700; font-size: 14px; color: var(--op-ink); }
+.op-login .pf-v5-c-form-control { --pf-v5-c-form-control--BorderRadius: 12px;
+  --pf-v5-c-form-control--after--BorderColor: var(--op-line);
+  --pf-v5-c-form-control--hover--after--BorderColor: var(--op-accent-light);
+  --pf-v5-c-form-control--focus--after--BorderColor: var(--op-accent);
+  border-radius: 12px; }
+.op-login .pf-v5-c-form-control > input { padding: 12px 14px; font-size: 15px; }
+.op-login .pf-v5-c-form-control:focus-within { box-shadow: 0 0 0 4px var(--op-soft); }
+.op-login .pf-v5-c-input-group .pf-v5-c-button.pf-m-control { border-radius: 0 12px 12px 0; }
+
+.op-login .pf-v5-c-button.pf-m-primary { --pf-v5-c-button--m-primary--BackgroundColor: var(--op-accent);
+  --pf-v5-c-button--m-primary--hover--BackgroundColor: var(--op-accent-dark);
+  --pf-v5-c-button--m-primary--focus--BackgroundColor: var(--op-accent-dark);
+  --pf-v5-c-button--BorderRadius: 999px; border-radius: 999px; padding: 13px 20px; font-weight: 800; font-size: 15px;
+  box-shadow: 0 10px 24px -10px rgb(124 58 237 / 55%); }
+.op-login .pf-v5-c-button.pf-m-secondary, .op-login .pf-v5-c-button.pf-m-tertiary { border-radius: 999px; }
+.op-login a { font-weight: 700; }
+.op-login .pf-v5-c-check__label { font-size: 14px; }
+.op-login .pf-v5-c-alert { border-radius: 14px; }
+
+.op-login #login-select-toggle { border-radius: 999px; }
+
+@media (max-width: 900px) {
+  .op-shell { grid-template-columns: 1fr; }
+  .op-brand { display: none; }
+  .op-mobile-logo { display: flex; }
+  .op-demo-mobile { display: block; }
+  .op-login.pf-v5-c-login { align-items: flex-start; padding-top: 40px; }
+  .op-login .pf-v5-c-login__main-header { padding: 28px 22px 6px; }
+  .op-login .pf-v5-c-login__main-body { padding: 14px 22px 6px; }
+  .op-login .pf-v5-c-login__main-footer { padding: 6px 22px 22px; }
+}
+
+/* PatternFly dibuja los bordes con ::before y ::after: se redondean igual que el campo. */
+.op-login .pf-v5-c-form-control::before,
+.op-login .pf-v5-c-form-control::after,
+.op-login .pf-v5-c-button.pf-m-control::before,
+.op-login .pf-v5-c-button.pf-m-control::after { border-radius: inherit; }
+.op-login .pf-v5-c-form-control::before,
+.op-login .pf-v5-c-button.pf-m-control::after { border: 1px solid var(--op-line) !important; }
+.op-login .pf-v5-c-form-control::after { border-color: transparent !important; }
+.op-login .pf-v5-c-form-control:focus-within::before { border-color: var(--op-accent) !important; }
+.op-login .pf-v5-c-input-group__item.pf-m-fill .pf-v5-c-form-control { border-radius: 12px 0 0 12px; }
+.op-login .pf-v5-c-input-group__item.pf-m-fill .pf-v5-c-form-control:focus-within { box-shadow: none; }
+.op-login .pf-v5-c-input-group:focus-within { box-shadow: 0 0 0 4px var(--op-soft); border-radius: 12px; }
+.op-login .pf-v5-c-form-control.pf-m-readonly { background: #f4f3f8; }
+.op-login .pf-v5-c-form-control.pf-m-readonly input { color: var(--op-ink); font-weight: 700; }
+.op-login .pf-v5-c-login__main-header-utilities .pf-v5-c-form-control { border-radius: 999px; }
+.op-login .pf-v5-c-login__main-header-utilities select { padding: 6px 30px 6px 14px; font-size: 13px; font-weight: 700; }

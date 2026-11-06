@@ -45,6 +45,7 @@ Monolito modular: un solo despliegue, con módulos que no pueden usar las clases
 - **Correos con outbox transaccional.** Cada aviso se escribe en `email_outbox` en la misma transacción del cambio; un despachador lo envía después con `FOR UPDATE SKIP LOCKED` y reintentos con espera creciente (1, 2, 4… minutos; tras 8 intentos queda como fallido). Si el SMTP cae, el cambio se guarda igual y el correo sale cuando vuelva; si el cambio falla, no queda correo. Entrega al menos una vez.
 - **Correos sin contenido sensible.** Nunca se le escribe a quien hizo el cambio, el cliente no recibe avisos de notas internas y los correos no copian el texto de los comentarios: invitan a abrir el ticket, donde se aplican los permisos.
 - **Adjuntos con lista blanca.** El tipo se decide por los primeros bytes del archivo, no por lo que diga el navegador, y la extensión debe coincidir: un ejecutable renombrado a `.png` se rechaza, y también HTML y SVG, que pueden llevar código. Máximo 4 MB (Vercel limita el cuerpo a 4.5 MB). La descarga siempre es `attachment`, con `nosniff` y CSP `sandbox`, y pasa por la API para aplicar permisos; los adjuntos internos no existen para el cliente. Si la transacción falla, el archivo guardado se borra.
+- **Inicio de sesión con la marca.** Keycloak usa un tema propio (`infra/keycloak/themes/opspilot`) que hereda los formularios del tema v2 y solo cambia el marco y el estilo: así las actualizaciones de Keycloak no rompen el login.
 - **Reloj inyectado.** Las pruebas adelantan el tiempo en vez de esperar horas.
 
 ## Stack

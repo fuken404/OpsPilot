@@ -33,7 +33,9 @@ services:
     ports:
       - "127.0.0.1:8180:8080"
     volumes:
-      - ./infra/keycloak:/opt/keycloak/data/import:ro
+      - ./infra/keycloak/opspilot-realm.json:/opt/keycloak/data/import/opspilot-realm.json:ro
+      # Tema propio de las pantallas de inicio de sesión. En start-dev no hay caché: los cambios se ven al recargar.
+      - ./infra/keycloak/themes/opspilot:/opt/keycloak/themes/opspilot:ro
     depends_on:
       postgres:
         condition: service_healthy
