@@ -1,0 +1,83 @@
+{
+  "realm": "opspilot",
+  "displayName": "OpsPilot",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "bruteForceProtected": true,
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "internationalizationEnabled": true,
+  "supportedLocales": ["es", "en"],
+  "defaultLocale": "es",
+  "clients": [
+    {
+      "clientId": "opspilot-web",
+      "name": "OpsPilot web",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "redirectUris": ["http://localhost:4200/*"],
+      "webOrigins": ["http://localhost:4200"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:4200/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "audiencia-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "opspilot-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "ana.admin",
+      "email": "ana.admin@opspilot.demo",
+      "firstName": "Ana",
+      "lastName": "Rojas",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "demo-opspilot", "temporary": false }]
+    },
+    {
+      "username": "tomas.tecnico",
+      "email": "tomas.tecnico@opspilot.demo",
+      "firstName": "Tomás",
+      "lastName": "Gil",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "demo-opspilot", "temporary": false }]
+    },
+    {
+      "username": "carla.cliente",
+      "email": "carla.cliente@opspilot.demo",
+      "firstName": "Carla",
+      "lastName": "Méndez",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "demo-opspilot", "temporary": false }]
+    },
+    {
+      "username": "lucia.cliente",
+      "email": "lucia.cliente@opspilot.demo",
+      "firstName": "Lucía",
+      "lastName": "Peña",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "demo-opspilot", "temporary": false }]
+    }
+  ]
+}

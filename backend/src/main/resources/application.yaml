@@ -1,0 +1,39 @@
+server:
+  port: ${PORT:8081}
+
+spring:
+  application:
+    name: opspilot
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5436/opspilot}
+    username: ${DATABASE_USERNAME:opspilot}
+    password: ${DATABASE_PASSWORD:opspilot}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    locations: classpath:db/migration
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${OIDC_ISSUER_URI:http://localhost:8180/realms/opspilot}
+
+opspilot:
+  security:
+    # El token debe ir dirigido a esta API: un token emitido para otra aplicación del mismo realm no sirve.
+    audience: ${OIDC_AUDIENCE:opspilot-api}
+    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:4200}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+springdoc:
+  api-docs:
+    path: /api/docs
+  swagger-ui:
+    path: /api/docs/ui
