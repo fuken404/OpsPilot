@@ -22,4 +22,9 @@ interface AppUserRepository extends JpaRepository<AppUser, UUID> {
         on conflict (subject) do nothing""")
     int insertIfAbsent(@Param("id") UUID id, @Param("subject") String subject, @Param("email") String email,
                        @Param("name") String name, @Param("now") Instant now);
+
+    /** Para los datos de demostración: alinea un usuario existente con el `sub` fijo de Keycloak. */
+    @Modifying
+    @Query(nativeQuery = true, value = "update app_user set subject = :subject, display_name = :name where id = :id")
+    int realign(@Param("id") UUID id, @Param("subject") String subject, @Param("name") String name);
 }

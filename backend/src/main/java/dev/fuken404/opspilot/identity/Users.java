@@ -48,6 +48,25 @@ public class Users {
         return user;
     }
 
+    /**
+     * Crea (o alinea) un usuario conocido de antemano, como las cuentas de demostración del realm,
+     * que tienen un `sub` fijo. Así puede tener datos antes de su primer ingreso.
+     */
+    @Transactional
+    public AppUser ensure(String subject, String email, String name) {
+        Optional<AppUser> bySubject = repository.findBySubject(subject);
+        if (bySubject.isPresent()) {
+            return bySubject.get();
+        }
+        Optional<AppUser> byEmail = repository.findByEmailIgnoreCase(email);
+        if (byEmail.isPresent()) {
+            repository.realign(byEmail.get().getId(), subject, name);
+        } else {
+            repository.insertIfAbsent(UUID.randomUUID(), subject, email, name, Instant.now(clock));
+        }
+        return repository.findBySubject(subject).orElseThrow();
+    }
+
     public Optional<AppUser> findByEmail(String email) {
         return repository.findByEmailIgnoreCase(email);
     }

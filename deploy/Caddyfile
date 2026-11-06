@@ -1,0 +1,27 @@
+# HTTPS automático con Let's Encrypt para la API y Keycloak.
+{
+	email {$ACME_EMAIL}
+}
+
+(seguridad) {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+}
+
+{$API_HOST} {
+	import seguridad
+	reverse_proxy api:8081
+}
+
+{$AUTH_HOST} {
+	import seguridad
+	# La consola de administración no se publica: se usa por un túnel SSH.
+	@admin path /admin /admin/* /realms/master /realms/master/*
+	respond @admin 404
+	reverse_proxy keycloak:8080
+}

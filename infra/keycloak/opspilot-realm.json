@@ -51,6 +51,7 @@
   ],
   "users": [
     {
+      "id": "4f1d2c3a-0a11-4e2b-9a01-000000000001",
       "username": "ana.admin",
       "email": "ana.admin@opspilot.demo",
       "firstName": "Ana",
@@ -66,6 +67,7 @@
       ]
     },
     {
+      "id": "4f1d2c3a-0a11-4e2b-9a01-000000000002",
       "username": "tomas.tecnico",
       "email": "tomas.tecnico@opspilot.demo",
       "firstName": "Tomás",
@@ -81,6 +83,7 @@
       ]
     },
     {
+      "id": "4f1d2c3a-0a11-4e2b-9a01-000000000003",
       "username": "carla.cliente",
       "email": "carla.cliente@opspilot.demo",
       "firstName": "Carla",
@@ -96,6 +99,7 @@
       ]
     },
     {
+      "id": "4f1d2c3a-0a11-4e2b-9a01-000000000004",
       "username": "lucia.cliente",
       "email": "lucia.cliente@opspilot.demo",
       "firstName": "Lucía",

@@ -4,3 +4,5 @@
 !.env.example
 .idea/
 .vscode/
+deploy/realm.json
+deploy/.env
