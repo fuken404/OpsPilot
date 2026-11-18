@@ -34,7 +34,7 @@ Base de datos en **Neon** y Redis en **Upstash**, ambos gratis y sin tarjeta.
 |---|---|
 | `PORT` | `8080` |
 | `SPRING_PROFILES_ACTIVE` | `demo` |
-| `DATABASE_URL` | `jdbc:postgresql://HOST_DE_NEON/opspilot?sslmode=require` |
+| `DATABASE_URL` | `jdbc:postgresql://HOST_DE_NEON/opspilot?sslmode=require` (también acepta la URL `postgresql://…` de Neon; si es la del pooler, la API usa la directa) |
 | `DATABASE_USERNAME` | usuario de Neon |
 | `DATABASE_PASSWORD` | contraseña de Neon |
 | `KC_DB_URL` | `jdbc:postgresql://HOST_DE_NEON/keycloak?sslmode=require` |
