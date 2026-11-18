@@ -19,9 +19,11 @@ COPY --from=build /src/extracted/spring-boot-loader/ ./
 COPY --from=build /src/extracted/snapshot-dependencies/ ./
 COPY --from=build /src/extracted/application/ ./
 USER app
+# Solo el compilador rápido (C1) y GC serial: arranca antes y gasta menos CPU, que en Vercel se cobra.
 ENV ATTACHMENTS_DIR=/data/attachments \
-    JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError"
-EXPOSE 8081
+    PORT=8080 \
+    JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError -XX:TieredStopAtLevel=1 -XX:+UseSerialGC"
+EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-  CMD ["sh", "-c", "exec 3<>/dev/tcp/127.0.0.1/8081 && printf 'GET /actuator/health HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q UP <&3"]
+  CMD ["sh", "-c", "exec 3<>/dev/tcp/127.0.0.1/${PORT} && printf 'GET /actuator/health HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q UP <&3"]
 ENTRYPOINT ["java", "org.springframework.boot.loader.launch.JarLauncher"]

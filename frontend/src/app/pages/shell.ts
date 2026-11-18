@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { MAT_FORM_FIELD_DEFAULT_OPTIONS } from '@angular/material/form-field';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { Avatar } from '../core/chips';
@@ -85,7 +85,13 @@ const NAV: NavItem[] = [
         } @else if (session.me()) {
           <router-outlet />
         } @else {
-          <p class="muted">Cargando…</p>
+          <div class="waking" role="status">
+            <span class="spinner" aria-hidden="true"></span>
+            <p>{{ slow() ? 'Despertando el servidor de la demo…' : 'Cargando…' }}</p>
+            @if (slow()) {
+              <p class="muted">La demo se apaga cuando nadie la usa; el primer ingreso tarda unos segundos.</p>
+            }
+          </div>
         }
       </main>
 
@@ -142,6 +148,12 @@ const NAV: NavItem[] = [
 
     .content { min-width: 0; padding: 32px clamp(16px, 4vw, 48px) 56px; max-width: 1200px; box-sizing: border-box; width: 100%; }
     .tabbar { display: none; }
+    .waking { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; padding: 18vh 16px; }
+    .waking p { margin: 0; font-weight: 700; }
+    .waking .muted { font-weight: 400; max-width: 40ch; }
+    .spinner { width: 32px; height: 32px; border-radius: 50%; border: 3px solid var(--accent-soft);
+      border-top-color: var(--accent); animation: spin .9s linear infinite; margin-bottom: 8px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
     @keyframes pulse { 50% { box-shadow: 0 0 0 7px rgb(167 139 250 / 0%); } }
     @media (prefers-reduced-motion: reduce) { .live.on i { animation: none; } }
@@ -168,14 +180,21 @@ const NAV: NavItem[] = [
     }
   `,
 })
-export class Shell implements OnInit {
+export class Shell implements OnInit, OnDestroy {
   protected readonly session = inject(Session);
   protected readonly realtime = inject(Realtime);
   protected readonly labels = ROLE_LABELS;
   protected readonly nav = NAV;
 
+  protected readonly slow = signal(false);
+  private readonly slowTimer = setTimeout(() => this.slow.set(true), 2500);
+
   ngOnInit(): void {
     void this.session.load();
+  }
+
+  ngOnDestroy(): void {
+    clearTimeout(this.slowTimer);
   }
 
   protected select(event: Event): void {

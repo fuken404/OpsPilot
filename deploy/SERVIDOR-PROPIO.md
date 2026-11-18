@@ -1,6 +1,9 @@
-# Guía de despliegue
+# Alternativa: servidor propio
 
-Frontend en Vercel; API, Keycloak y bases en una máquina gratuita de Oracle Cloud.
+La demo pública corre en Vercel (ver [`GUIA-VERCEL.md`](../GUIA-VERCEL.md)). Esta guía deja todo listo para
+moverla a una máquina propia —aquí, Oracle Cloud Always Free— sin arranques en frío: API, Keycloak y bases en
+Docker Compose con Caddy, y despliegue continuo con el flujo `Despliegue` de GitHub Actions (se activa al
+definir la variable `DEPLOY_HOST`).
 
 ## 1. Cuenta de Oracle Cloud
 

@@ -1,5 +1,6 @@
-import { Component, computed, inject, OnDestroy, signal } from '@angular/core';
+import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { OidcSecurityService } from 'angular-auth-oidc-client';
+import { environment } from '../../environments/environment';
 import { Logo } from '../core/logo';
 
 interface DemoTicket {
@@ -177,7 +178,7 @@ interface DemoTicket {
     }
   `,
 })
-export class Landing implements OnDestroy {
+export class Landing implements OnInit, OnDestroy {
   private readonly oidc = inject(OidcSecurityService);
   private readonly started = Date.now();
   private readonly tick = signal(0);
@@ -220,6 +221,17 @@ export class Landing implements OnDestroy {
     const m = Math.floor((seconds % 3600) / 60);
     const s = seconds % 60;
     return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+
+  /**
+   * La API y Keycloak se apagan cuando no hay tráfico. Mientras la persona lee la portada se
+   * despiertan en segundo plano, para que al pulsar "Entrar" ya estén listos.
+   */
+  ngOnInit(): void {
+    const api = environment.apiUrl.replace(/\/api$/, '');
+    for (const url of [`${api}/actuator/health`, `${environment.oidc.authority}/.well-known/openid-configuration`]) {
+      fetch(url, { mode: 'no-cors', cache: 'no-store' }).catch(() => undefined);
+    }
   }
 
   login(): void {

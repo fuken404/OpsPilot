@@ -67,9 +67,13 @@ opspilot:
   app-url: ${APP_URL:http://localhost:4200}
   mail:
     from: ${MAIL_FROM:OpsPilot <no-reply@opspilot.local>}
+    # smtp: envía de verdad. log: solo lo registra (la demo pública usa correos inventados).
+    transport: ${MAIL_TRANSPORT:smtp}
     dispatcher-enabled: false
   attachments:
     max-bytes: 4194304
+    # local: disco (desarrollo, servidor propio). database: dentro de PostgreSQL (Vercel, sin disco).
+    storage: ${ATTACHMENTS_STORAGE:local}
     local-dir: ${ATTACHMENTS_DIR:${user.home}/.opspilot/attachments}
   realtime:
     # memory: una sola instancia. redis: varias instancias comparten los eventos por pub/sub.

@@ -6,10 +6,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
-/** Disco local, para desarrollo. En producción se reemplaza por un almacenamiento de objetos. */
+/** Disco local: desarrollo o un servidor con volumen persistente. */
 @Component
+@ConditionalOnProperty(name = "opspilot.attachments.storage", havingValue = "local", matchIfMissing = true)
 class LocalFileStorage implements FileStorage {
 
     private final Path root;

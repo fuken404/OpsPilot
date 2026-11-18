@@ -30,17 +30,19 @@ public class EmailDispatcher {
     private final TransactionTemplate transaction;
     private final JavaMailSender mail;
     private final String from;
+    private final boolean simulated;
     private final Clock clock;
 
     EmailDispatcher(EmailOutboxRepository outbox, Organizations organizations, TenantContext tenant,
                     TransactionTemplate transaction, JavaMailSender mail, @Value("${opspilot.mail.from}") String from,
-                    Clock clock) {
+                    @Value("${opspilot.mail.transport:smtp}") String transport, Clock clock) {
         this.outbox = outbox;
         this.organizations = organizations;
         this.tenant = tenant;
         this.transaction = transaction;
         this.mail = mail;
         this.from = from;
+        this.simulated = "log".equals(transport);
         this.clock = clock;
     }
 
@@ -72,6 +74,12 @@ public class EmailDispatcher {
         int sent = 0;
         int failed = 0;
         for (EmailOutboxEntry entry : outbox.lockDue(organizationId, now)) {
+            if (simulated) {
+                log.info("Correo simulado para {}: {}", entry.getRecipient(), entry.getSubject());
+                entry.sent(now);
+                sent++;
+                continue;
+            }
             try {
                 mail.send(message(entry));
                 entry.sent(now);

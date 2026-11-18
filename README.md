@@ -50,23 +50,26 @@ Monolito modular: un solo despliegue, con módulos que no pueden usar las clases
 
 ## Stack
 
-Java 25 · Spring Boot 4.1 · Spring Security (OAuth 2.0 / OIDC) · Spring Modulith · WebSocket · JPA · Flyway · PostgreSQL 17 · Redis (Valkey) · Jakarta Mail · Keycloak 26 · Angular 22 (Signals, standalone, zoneless) · Angular Material · Vitest · JUnit 5 · Testcontainers · Docker Compose · Caddy · GitHub Actions · Oracle Cloud · Vercel
+Java 25 · Spring Boot 4.1 · Spring Security (OAuth 2.0 / OIDC) · Spring Modulith · WebSocket · JPA · Flyway · PostgreSQL 17 · Redis (Valkey) · Jakarta Mail · Keycloak 26 · Angular 22 (Signals, standalone, zoneless) · Angular Material · Vitest · JUnit 5 · Testcontainers · Docker Compose · Caddy · GitHub Actions · Vercel · Neon · Upstash
 
 ## Despliegue
 
-| Pieza | Dónde |
+Un solo proyecto de Vercel con tres servicios, enrutados por dominio en [`vercel.json`](vercel.json):
+
+| Dominio | Servicio |
 |---|---|
-| Frontend (Angular) | Vercel, con CSP estricta y cabeceras de seguridad |
-| API, Keycloak, PostgreSQL, Valkey | Una máquina ARM de Oracle Cloud Always Free con Docker Compose |
-| HTTPS | Caddy con certificados automáticos de Let's Encrypt |
-| Copias | Diarias (bases y adjuntos), 7 días en el servidor y opcionalmente en Oracle Object Storage |
+| `opspilot.fuken404.dev` | Angular estático, con CSP estricta |
+| `api.opspilot.fuken404.dev` | Spring Boot en el runtime de contenedores |
+| `auth.opspilot.fuken404.dev` | Keycloak en el runtime de contenedores |
 
-- **Por qué no todo en Vercel.** El plan gratuito de Vercel incluye 4 horas de CPU y 360 GB-hora de memoria al mes, y apaga los contenedores a los 5 minutos sin tráfico. Una app con WebSockets, relojes de SLA y Keycloak necesita estar encendida: en contenedores efímeros tendría arranques de 10 a 20 s y riesgo de pausa del proyecto.
-- **Despliegue continuo.** Cuando el CI pasa en `main`, GitHub Actions construye las imágenes en un runner ARM, las publica en GitHub Container Registry y actualiza el servidor por SSH. El token del registro viaja por la entrada estándar y se cierra la sesión al terminar.
-- **Superficie mínima.** Solo Caddy expone puertos. La consola de administración de Keycloak responde 404 desde internet y se usa por un túnel SSH.
+PostgreSQL en Neon y Redis en Upstash. Guía paso a paso en [`GUIA-VERCEL.md`](GUIA-VERCEL.md).
+
+- **Pensado para contenedores que se apagan.** Vercel apaga los contenedores a los 5 minutos sin tráfico y no tiene disco persistente. Los adjuntos se guardan en PostgreSQL (en la misma transacción que su registro, y con Row Level Security por la clave), las sesiones de Keycloak viven en la base y su caché es local, y el barrido de SLA y los correos corren mientras la app está despierta. La portada despierta la API y Keycloak en segundo plano para que el ingreso sea rápido.
+- **Arranque barato.** La API usa solo el compilador C1 y GC serial: arranca en unos 6 s y gasta menos CPU, que es lo que limita el plan gratuito. Keycloak va compilado (`--optimized`) con el tema y el realm dentro.
+- **Correos de la demo.** Las cuentas de demostración usan un dominio inventado, así que en producción el despachador los registra en vez de enviarlos (`MAIL_TRANSPORT=log`); la bandeja de salida funciona igual.
+- **Superficie mínima.** `/admin` de Keycloak redirige a la app: la consola no se publica.
 - **Demo con datos.** Las cuentas de demostración tienen un `sub` fijo en el realm, así que la API siembra sus tickets antes del primer ingreso.
-
-Los archivos están en [`deploy/`](deploy/) y la guía paso a paso en [`deploy/GUIA.md`](deploy/GUIA.md).
+- **Alternativa sin arranques en frío.** [`deploy/`](deploy/) tiene todo para un servidor propio (Docker Compose, Caddy con HTTPS, copias diarias y despliegue continuo por SSH desde GitHub Actions).
 
 ## Correr en local
 
@@ -108,4 +111,4 @@ cd frontend && npx ng test --watch=false
 3. **Motor de SLA** ✅ Políticas por prioridad, calendario laboral con festivos, pausas, alertas y escalamiento.
 4. **Tiempo real** ✅ WebSockets por organización, difusión con Redis y tablero con métricas.
 5. **Notificaciones y adjuntos** ✅ Outbox transaccional, correos con reintentos y archivos validados.
-6. **Publicación:** Oracle Cloud + Vercel, despliegue continuo, demo pública, Playwright y OpenAPI.
+6. **Publicación:** Vercel (servicios + contenedores), Neon, Upstash, demo pública, Playwright y OpenAPI.
