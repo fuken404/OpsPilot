@@ -2,7 +2,9 @@
 
 Plataforma de gestión de incidentes de TI para varias empresas: tickets, responsables, prioridades y acuerdos de nivel de servicio (SLA), con aislamiento de datos por organización y auditoría.
 
-> En construcción por fases. Van las fases 1 a 5: **base**, **núcleo de incidentes**, **motor de SLA**, **tiempo real con tablero** y **correos con adjuntos**. Ver [Plan](#plan).
+**Demo:** <https://opspilot.fuken404.dev> · cuentas `ana.admin`, `tomas.tecnico`, `carla.cliente`, `lucia.cliente` con la contraseña `demo-opspilot`. El primer ingreso tarda unos segundos mientras la demo despierta.
+
+> Construido por fases; van las seis: base, núcleo de incidentes, motor de SLA, tiempo real, correos con adjuntos y publicación.
 
 ## Arquitectura
 
@@ -111,4 +113,4 @@ cd frontend && npx ng test --watch=false
 3. **Motor de SLA** ✅ Políticas por prioridad, calendario laboral con festivos, pausas, alertas y escalamiento.
 4. **Tiempo real** ✅ WebSockets por organización, difusión con Redis y tablero con métricas.
 5. **Notificaciones y adjuntos** ✅ Outbox transaccional, correos con reintentos y archivos validados.
-6. **Publicación:** Vercel (servicios + contenedores), Neon, Upstash, demo pública, Playwright y OpenAPI.
+6. **Publicación** ✅ Vercel (servicios + contenedores), Neon, Upstash, demo pública y OpenAPI en `/api/docs/ui`.
