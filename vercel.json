@@ -54,7 +54,18 @@
     "auth": {
       "root": "infra/keycloak/",
       "runtime": "container",
-      "entrypoint": "Dockerfile"
+      "entrypoint": "Dockerfile",
+      "headers": [
+        {
+          "source": "/resources/(.*)",
+          "headers": [
+            {
+              "key": "Vercel-CDN-Cache-Control",
+              "value": "public, max-age=31536000, immutable"
+            }
+          ]
+        }
+      ]
     }
   },
   "redirects": [
