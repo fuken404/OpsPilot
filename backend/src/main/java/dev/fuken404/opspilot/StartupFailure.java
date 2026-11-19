@@ -24,7 +24,8 @@ final class StartupFailure {
         if (port == null || port.isBlank()) {
             return;
         }
-        byte[] body = ("{\"error\":\"La API no pudo arrancar\",\"causa\":\"" + escape(describe(error)) + "\"}")
+        byte[] body = ("{\"error\":\"La API no pudo arrancar\",\"causa\":\"" + escape(describe(error))
+            + "\",\"pista\":\"" + escape(hint()) + "\"}")
             .getBytes(StandardCharsets.UTF_8);
         try {
             HttpServer server = HttpServer.create(new InetSocketAddress(Integer.parseInt(port)), 0);
@@ -43,10 +44,21 @@ final class StartupFailure {
         System.exit(1);
     }
 
+    /** Con qué empieza DATABASE_URL (sin datos): basta para ver si tiene el formato equivocado. */
+    static String hint() {
+        String url = System.getenv("DATABASE_URL");
+        if (url == null) {
+            return "DATABASE_URL no está definida";
+        }
+        String start = url.length() > 14 ? url.substring(0, 14) : url;
+        return "DATABASE_URL empieza por [" + start.replaceAll("[^a-zA-Z:/'\" ._-]", "?") + "] y mide " + url.length()
+            + " caracteres";
+    }
+
     /** Las causas encadenadas, de la más profunda a la más general, sin datos sensibles. */
     static String describe(Throwable error) {
         List<String> causes = new ArrayList<>();
-        for (Throwable t = error; t != null && causes.size() < 4; t = t.getCause() == t ? null : t.getCause()) {
+        for (Throwable t = error; t != null && causes.size() < 2; t = t.getCause() == t ? null : t.getCause()) {
             causes.addFirst(t.getClass().getSimpleName() + ": " + mask(String.valueOf(t.getMessage())));
         }
         return String.join(" <- ", causes);

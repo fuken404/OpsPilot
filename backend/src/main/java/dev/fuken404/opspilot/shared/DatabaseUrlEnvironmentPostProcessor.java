@@ -25,11 +25,15 @@ public class DatabaseUrlEnvironmentPostProcessor implements EnvironmentPostProce
 
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
-        String explicit = environment.getProperty("DATABASE_URL");
+        String explicit = clean(environment.getProperty("DATABASE_URL"));
         if (explicit != null && explicit.startsWith("jdbc:")) {
+            if (!explicit.equals(environment.getProperty("DATABASE_URL"))) {
+                environment.getPropertySources().addFirst(
+                    new MapPropertySource("databaseUrl", Map.of("spring.datasource.url", explicit)));
+            }
             return;
         }
-        Optional.ofNullable(environment.getProperty("DATABASE_URL_UNPOOLED"))
+        Optional.ofNullable(clean(environment.getProperty("DATABASE_URL_UNPOOLED")))
             .or(() -> Optional.ofNullable(explicit))
             .flatMap(DatabaseUrlEnvironmentPostProcessor::parse)
             .ifPresent(connection -> {
@@ -43,6 +47,19 @@ public class DatabaseUrlEnvironmentPostProcessor implements EnvironmentPostProce
                 }
                 environment.getPropertySources().addFirst(new MapPropertySource("databaseUrl", properties));
             });
+    }
+
+    /**
+     * Quita lo que suele colarse al copiar desde Neon: espacios, comillas o el comando
+     * {@code psql '...'} completo. Devuelve la primera URL que encuentre.
+     */
+    static String clean(String value) {
+        if (value == null) {
+            return null;
+        }
+        java.util.regex.Matcher url = java.util.regex.Pattern
+            .compile("(jdbc:postgresql://|postgres(ql)?://)[^\\s'\"]+").matcher(value);
+        return url.find() ? url.group() : value.strip();
     }
 
     static Optional<Connection> parse(String url) {

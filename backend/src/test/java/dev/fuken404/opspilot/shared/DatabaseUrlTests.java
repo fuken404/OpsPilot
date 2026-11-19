@@ -32,4 +32,14 @@ class DatabaseUrlTests {
         new DatabaseUrlEnvironmentPostProcessor().postProcessEnvironment(jdbc, new SpringApplication());
         assertThat(jdbc.getProperty("spring.datasource.url")).isNull();
     }
+
+    @Test
+    void limpiaLoQueSeCuelaAlCopiar() {
+        assertThat(DatabaseUrlEnvironmentPostProcessor.clean("psql 'postgresql://u:p@h.neon.tech/db?sslmode=require'"))
+            .isEqualTo("postgresql://u:p@h.neon.tech/db?sslmode=require");
+        assertThat(DatabaseUrlEnvironmentPostProcessor.clean("  \"jdbc:postgresql://h/db?sslmode=require\" "))
+            .isEqualTo("jdbc:postgresql://h/db?sslmode=require");
+        assertThat(DatabaseUrlEnvironmentPostProcessor.clean("DATABASE_URL=postgres://u:p@h/db"))
+            .isEqualTo("postgres://u:p@h/db");
+    }
 }
