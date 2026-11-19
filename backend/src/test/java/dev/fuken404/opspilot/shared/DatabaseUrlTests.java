@@ -42,4 +42,12 @@ class DatabaseUrlTests {
         assertThat(DatabaseUrlEnvironmentPostProcessor.clean("DATABASE_URL=postgres://u:p@h/db"))
             .isEqualTo("postgres://u:p@h/db");
     }
+
+    @Test
+    void laUrlDeUpstashSiempreVaConTls() {
+        assertThat(DatabaseUrlEnvironmentPostProcessor.cleanRedis("redis-cli --tls -u redis://default:k@x.upstash.io:6379"))
+            .isEqualTo("rediss://default:k@x.upstash.io:6379");
+        assertThat(DatabaseUrlEnvironmentPostProcessor.cleanRedis("redis://localhost:6379"))
+            .isEqualTo("redis://localhost:6379");
+    }
 }

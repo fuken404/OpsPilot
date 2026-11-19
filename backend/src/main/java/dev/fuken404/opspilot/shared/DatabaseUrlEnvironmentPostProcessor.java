@@ -69,11 +69,22 @@ public class DatabaseUrlEnvironmentPostProcessor implements EnvironmentPostProce
         if (raw == null) {
             return;
         }
-        java.util.regex.Matcher url = java.util.regex.Pattern.compile("rediss?://[^\\s'\"]+").matcher(raw);
-        if (url.find() && !url.group().equals(raw)) {
+        String cleaned = cleanRedis(raw);
+        if (cleaned != null && !cleaned.equals(raw)) {
             environment.getPropertySources().addFirst(
-                new MapPropertySource("redisUrl", Map.of("spring.data.redis.url", url.group())));
+                new MapPropertySource("redisUrl", Map.of("spring.data.redis.url", cleaned)));
         }
+    }
+
+    /** Upstash exige TLS: si el comando trae --tls o el host es de Upstash, la URL debe ser rediss://. */
+    static String cleanRedis(String raw) {
+        java.util.regex.Matcher url = java.util.regex.Pattern.compile("rediss?://[^\\s'\"]+").matcher(raw);
+        if (!url.find()) {
+            return null;
+        }
+        String found = url.group();
+        boolean tls = raw.contains("--tls") || found.contains(".upstash.io");
+        return tls && found.startsWith("redis://") ? "rediss://" + found.substring("redis://".length()) : found;
     }
 
     static Optional<Connection> parse(String url) {
