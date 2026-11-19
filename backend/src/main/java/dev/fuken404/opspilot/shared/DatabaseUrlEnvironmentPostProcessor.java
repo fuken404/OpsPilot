@@ -25,6 +25,7 @@ public class DatabaseUrlEnvironmentPostProcessor implements EnvironmentPostProce
 
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
+        cleanRedisUrl(environment);
         String explicit = clean(environment.getProperty("DATABASE_URL"));
         if (explicit != null && explicit.startsWith("jdbc:")) {
             if (!explicit.equals(environment.getProperty("DATABASE_URL"))) {
@@ -60,6 +61,19 @@ public class DatabaseUrlEnvironmentPostProcessor implements EnvironmentPostProce
         java.util.regex.Matcher url = java.util.regex.Pattern
             .compile("(jdbc:postgresql://|postgres(ql)?://)[^\\s'\"]+").matcher(value);
         return url.find() ? url.group() : value.strip();
+    }
+
+    /** Upstash muestra la URL dentro de un comando ({@code redis-cli --tls -u rediss://...}): se queda solo con la URL. */
+    private static void cleanRedisUrl(ConfigurableEnvironment environment) {
+        String raw = environment.getProperty("REDIS_URL");
+        if (raw == null) {
+            return;
+        }
+        java.util.regex.Matcher url = java.util.regex.Pattern.compile("rediss?://[^\\s'\"]+").matcher(raw);
+        if (url.find() && !url.group().equals(raw)) {
+            environment.getPropertySources().addFirst(
+                new MapPropertySource("redisUrl", Map.of("spring.data.redis.url", url.group())));
+        }
     }
 
     static Optional<Connection> parse(String url) {
