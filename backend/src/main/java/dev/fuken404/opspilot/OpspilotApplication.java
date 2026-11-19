@@ -7,7 +7,12 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class OpspilotApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(OpspilotApplication.class, args);
+		try {
+			SpringApplication.run(OpspilotApplication.class, args);
+		} catch (Throwable error) {
+			StartupFailure.serve(error);
+			throw error;
+		}
 	}
 
 }
